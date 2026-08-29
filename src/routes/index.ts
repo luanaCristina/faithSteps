@@ -20,6 +20,7 @@ const youversion: YouVersionService = config.youversion.useMock
   : new HttpYouVersionService({
       baseUrl: config.youversion.baseUrl,
       apiKey: config.youversion.apiKey,
+      versionId: config.youversion.versionId,
     });
 
 const langQuery = z.object({

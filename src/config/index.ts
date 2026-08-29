@@ -34,6 +34,12 @@ export const config = {
     baseUrl: process.env.YOUVERSION_API_BASE_URL ?? 'https://api.youversion.com/v1',
     apiKey: process.env.YOUVERSION_API_KEY ?? '',
     useMock: (process.env.YOUVERSION_USE_MOCK ?? 'false').toLowerCase() === 'true',
+    // version_id da Biblia por idioma (YouVersion Platform).
+    // PT=129 (NVI), EN=111 (NIV). Ajustaveis por env.
+    versionId: {
+      [Language.PT]: int(process.env.YOUVERSION_VERSION_ID_PT, 129),
+      [Language.EN]: int(process.env.YOUVERSION_VERSION_ID_EN, 111),
+    },
   },
 
   gamification: {
