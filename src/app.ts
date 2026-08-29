@@ -1,6 +1,7 @@
 /**
  * Configuracao do app Express: middleware, rotas e handler de erros.
  */
+import { join } from 'path';
 import express, { NextFunction, Request, Response } from 'express';
 import { AppError, ERROR_CODES, ErrorResponse } from '@/models';
 import { router } from '@/routes';
@@ -9,8 +10,12 @@ export const app = express();
 
 app.use(express.json());
 
-// Raiz: identifica o servico e serve de healthcheck simples para a plataforma.
-app.get('/', (_req, res) => {
+// Painel de teste (frontend estatico). Funciona em dev (src) e prod (dist),
+// pois a pasta public fica na raiz do projeto -> um nivel acima de __dirname.
+app.use(express.static(join(__dirname, '..', 'public')));
+
+// Info do servico em JSON (healthcheck programatico).
+app.get('/info', (_req, res) => {
   res.json({
     name: 'YouVersion FaithSteps API',
     status: 'ok',

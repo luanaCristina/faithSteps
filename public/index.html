@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>YouVersion FaithSteps - Painel de Teste</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: #0f1220; color: #e7e9f0; line-height: 1.5;
+    }
+    header {
+      padding: 28px 20px; text-align: center;
+      background: linear-gradient(135deg, #1b2a4a, #3a1b4a);
+      border-bottom: 1px solid #2a2f45;
+    }
+    header h1 { margin: 0 0 6px; font-size: 1.5rem; }
+    header p { margin: 0; color: #9aa2c0; font-size: .9rem; }
+    main { max-width: 860px; margin: 0 auto; padding: 20px; }
+    .card {
+      background: #161a2e; border: 1px solid #2a2f45; border-radius: 12px;
+      padding: 18px; margin-bottom: 16px;
+    }
+    .card h2 { margin: 0 0 12px; font-size: 1.05rem; color: #c7b3ff; }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    label { font-size: .82rem; color: #9aa2c0; }
+    input, select {
+      background: #0f1220; color: #e7e9f0; border: 1px solid #2a2f45;
+      border-radius: 8px; padding: 8px 10px; font-size: .9rem;
+    }
+    button {
+      background: #6d4bff; color: #fff; border: 0; border-radius: 8px;
+      padding: 9px 14px; font-size: .9rem; cursor: pointer; font-weight: 600;
+    }
+    button:hover { background: #825dff; }
+    button.secondary { background: #2a2f45; }
+    pre {
+      background: #0b0e1a; border: 1px solid #2a2f45; border-radius: 8px;
+      padding: 12px; overflow: auto; font-size: .8rem; margin: 12px 0 0;
+      max-height: 320px; white-space: pre-wrap; word-break: break-word;
+    }
+    .hint { font-size: .78rem; color: #7d84a3; margin-top: 6px; }
+    footer { text-align: center; padding: 20px; color: #7d84a3; font-size: .78rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>YouVersion FaithSteps</h1>
+    <p>Painel de teste dos recursos da API</p>
+  </header>
+
+  <main>
+    <div class="card">
+      <h2>Saude da API</h2>
+      <div class="row">
+        <button onclick="call('/api/health', 'health')">GET /api/health</button>
+      </div>
+      <pre id="health">—</pre>
+    </div>
+
+    <div class="card">
+      <h2>Biblia (YouVersion)</h2>
+      <div class="row">
+        <label>Idioma</label>
+        <select id="lang">
+          <option value="pt">Português (pt)</option>
+          <option value="en">English (en)</option>
+        </select>
+        <button onclick="callBible('books')">Listar livros</button>
+        <button onclick="callBible('verse-of-the-day')">Versículo do dia</button>
+      </div>
+      <pre id="bible">—</pre>
+    </div>
+
+    <div class="card">
+      <h2>Desafios</h2>
+      <div class="row">
+        <button onclick="call('/api/challenges', 'challenges')">Listar desafios</button>
+      </div>
+      <pre id="challenges">—</pre>
+    </div>
+
+    <div class="card">
+      <h2>Sincronizar leitura de capítulo</h2>
+      <div class="row">
+        <label>User ID</label>
+        <input id="cc_user" placeholder="uuid do usuário" size="30" />
+      </div>
+      <div class="row" style="margin-top:8px">
+        <label>Challenge ID</label>
+        <input id="cc_challenge" placeholder="uuid do desafio" size="30" />
+      </div>
+      <div class="row" style="margin-top:8px">
+        <label>Livro</label>
+        <input id="cc_book" placeholder="JHN" size="6" />
+        <label>Capítulo</label>
+        <input id="cc_chapter" type="number" value="3" size="4" />
+        <label>Idioma</label>
+        <select id="cc_lang"><option value="pt">pt</option><option value="en">en</option></select>
+        <button onclick="completeChapter()">Marcar como lido</button>
+      </div>
+      <p class="hint">Requer um usuário e um desafio existentes no banco.</p>
+      <pre id="complete">—</pre>
+    </div>
+  </main>
+
+  <footer>
+    FaithSteps API · <span id="origin"></span>
+  </footer>
+
+  <script>
+    document.getElementById('origin').textContent = location.origin;
+
+    async function call(path, target) {
+      const el = document.getElementById(target);
+      el.textContent = 'Carregando...';
+      try {
+        const res = await fetch(path);
+        const data = await res.json();
+        el.textContent = 'HTTP ' + res.status + '\n' + JSON.stringify(data, null, 2);
+      } catch (e) {
+        el.textContent = 'Erro: ' + e.message;
+      }
+    }
+
+    function callBible(kind) {
+      const lang = document.getElementById('lang').value;
+      call('/api/bible/' + kind + '?language=' + lang, 'bible');
+    }
+
+    async function completeChapter() {
+      const el = document.getElementById('complete');
+      el.textContent = 'Enviando...';
+      const body = {
+        userId: document.getElementById('cc_user').value.trim(),
+        challengeId: document.getElementById('cc_challenge').value.trim(),
+        bookUsfm: document.getElementById('cc_book').value.trim(),
+        chapter: Number(document.getElementById('cc_chapter').value),
+        language: document.getElementById('cc_lang').value,
+      };
+      try {
+        const res = await fetch('/api/progress/complete-chapter', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const data = await res.json();
+        el.textContent = 'HTTP ' + res.status + '\n' + JSON.stringify(data, null, 2);
+      } catch (e) {
+        el.textContent = 'Erro: ' + e.message;
+      }
+    }
+  </script>
+</body>
+</html>

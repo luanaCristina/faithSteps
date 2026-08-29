@@ -49,32 +49,5 @@ router.get('/bible/verse-of-the-day', validate(langQuery, 'query'), async (req, 
   }
 });
 
-// --- Diagnostico temporario da integracao YouVersion ----------------------
-// Chama a API real e reporta status/corpo sem revelar a chave. Remover apos validar.
-router.get('/bible/_diag', async (_req, res, next) => {
-  try {
-    const key = config.youversion.apiKey;
-    const base = config.youversion.baseUrl;
-    const targets = ['/bibles', `/bibles/${config.youversion.versionId[Language.EN]}/books`];
-    const results: unknown[] = [];
-    for (const path of targets) {
-      const r = await fetch(new URL(path, base), {
-        headers: { 'X-YVP-App-Key': key, Accept: 'application/json' },
-      });
-      const body = (await r.text()).slice(0, 200);
-      results.push({ path, status: r.status, body });
-    }
-    res.json({
-      baseUrl: base,
-      apiKeyPresent: Boolean(key),
-      apiKeyLength: key.length,
-      versionIdEn: config.youversion.versionId[Language.EN],
-      results,
-    });
-  } catch (err) {
-    next(err);
-  }
-});
-
 router.use('/challenges', challengeRoutes);
 router.use('/progress', progressRoutes);

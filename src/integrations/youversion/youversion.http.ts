@@ -24,9 +24,11 @@ export interface YouVersionHttpConfig {
 
 // --- Formatos parciais das respostas reais da YouVersion Platform ----------
 interface YvBook {
-  usfm: string;
-  // A API pode expor o nome como "title" ou "human"; tratamos ambos.
+  // Formato real: usa "id" como codigo USFM (ex.: "GEN"). Mantemos "usfm" como fallback.
+  id?: string;
+  usfm?: string;
   title?: string;
+  full_title?: string;
   human?: string;
   name?: string;
   chapters?: unknown[];
@@ -36,6 +38,9 @@ interface YvBooksResponse {
   books?: YvBook[];
 }
 interface YvChapter {
+  // Formato real: { id: "1", passage_id: "GEN.1", title: "1" }
+  id?: string;
+  passage_id?: string;
   usfm?: string;
   reference?: { usfm?: string; human?: string };
   human?: string;
@@ -107,11 +112,14 @@ export class HttpYouVersionService implements YouVersionService {
     const versionId = this.versionFor(language);
     const body = await this.request<YvBooksResponse>(`/bibles/${versionId}/books`);
     const books = body.data ?? body.books ?? [];
-    return books.map((b) => ({
-      usfm: b.usfm,
-      name: b.title ?? b.human ?? b.name ?? b.usfm,
-      chapterCount: Array.isArray(b.chapters) ? b.chapters.length : 0,
-    }));
+    return books.map((b) => {
+      const usfm = b.usfm ?? b.id ?? '';
+      return {
+        usfm,
+        name: b.title ?? b.full_title ?? b.human ?? b.name ?? usfm,
+        chapterCount: Array.isArray(b.chapters) ? b.chapters.length : 0,
+      };
+    });
   }
 
   async listChapters(bookUsfm: string, language: Language): Promise<BibleChapter[]> {
@@ -120,16 +128,18 @@ export class HttpYouVersionService implements YouVersionService {
       `/bibles/${versionId}/books/${bookUsfm}/chapters`,
     );
     const chapters = body.data ?? body.chapters ?? [];
-    return chapters.map((c, i) => {
-      const usfm = c.usfm ?? c.reference?.usfm ?? `${bookUsfm}.${i + 1}`;
-      // usfm de capitulo tipicamente "JHN.3" -> extrai o numero.
-      const parsed = Number(usfm.split('.').pop());
-      return {
-        bookUsfm,
-        chapter: Number.isFinite(parsed) ? parsed : i + 1,
-        reference: c.human ?? c.reference?.human ?? c.title ?? usfm,
-      };
-    });
+    return chapters
+      // A API inclui itens introdutorios (ex.: "INTRO"); mantemos apenas capitulos numericos.
+      .map((c, i) => {
+        const passage = c.passage_id ?? c.usfm ?? c.reference?.usfm ?? `${bookUsfm}.${i + 1}`;
+        const num = Number(c.id ?? passage.split('.').pop());
+        return {
+          bookUsfm,
+          chapter: Number.isFinite(num) ? num : NaN,
+          reference: c.human ?? c.reference?.human ?? passage,
+        };
+      })
+      .filter((c) => Number.isFinite(c.chapter));
   }
 
   getReadingPlan(_planId: string, _language: Language): Promise<ReadingPlan> {
