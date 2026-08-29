@@ -81,9 +81,17 @@ export class HttpYouVersionService implements YouVersionService {
     }
 
     if (!res.ok) {
+      // Inclui o corpo (truncado) e o path chamado para diagnostico.
+      // A chave nunca aparece aqui (vai apenas no header).
+      let body = '';
+      try {
+        body = (await res.text()).slice(0, 300);
+      } catch {
+        body = '<sem corpo>';
+      }
       throw new AppError(
         ERROR_CODES.YOUVERSION_API_ERROR,
-        `YouVersion API respondeu com status ${res.status}.`,
+        `YouVersion API respondeu ${res.status} em ${url.pathname}. Detalhe: ${body}`,
         502,
       );
     }
