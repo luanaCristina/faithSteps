@@ -100,3 +100,29 @@ Outros comandos: `npm run build`, `npm start`, `npm test`, `npm run test:coverag
 | YOUVERSION_USE_MOCK      | false                           |
 | XP_PER_CHAPTER_PT        | 15                              |
 | XP_PER_CHAPTER_EN        | 25                              |
+
+## Deploy gratuito (Render + Neon)
+
+A API sobe de graça combinando **Neon** (Postgres gerenciado, free) e **Render** (web service, free). O código já está pronto: lê `DATABASE_URL`, habilita SSL e roda as migrations no boot.
+
+### 1. Banco no Neon
+1. Crie uma conta em https://neon.tech e um projeto Postgres.
+2. Copie a connection string (formato `postgresql://user:pass@host/db?sslmode=require`).
+
+### 2. API no Render (via Blueprint)
+1. Faça push deste repositório para o GitHub (já configurado).
+2. Em https://dashboard.render.com/blueprints, clique em **New Blueprint Instance** e selecione o repositório. O Render lê o `render.yaml`.
+3. Preencha as variáveis pedidas:
+   - `DATABASE_URL`: a connection string do Neon.
+   - `YOUVERSION_API_KEY`: a chave da sua app na YouVersion Platform.
+4. Confirme o deploy. No primeiro boot, `RUN_MIGRATIONS_ON_BOOT=true` cria todas as tabelas no Neon automaticamente.
+
+### 3. Ativar a chave da YouVersion (produção)
+Após o deploy, o Render gera uma URL pública (ex.: `https://faithsteps-api.onrender.com`). No portal da YouVersion Platform, na janela **"Making your YouVersion Platform App Live"**, cole essa URL no campo **Website** e clique em **Make App Live**. Isso aumenta o rate limit para níveis de produção.
+
+### Verificação
+- `GET /` → `{ "name": "YouVersion FaithSteps API", "status": "ok" }`
+- `GET /api/health` → `{ "status": "ok" }`
+- `GET /api/bible/books?language=pt` → livros da Bíblia via YouVersion.
+
+> **Observações do free tier:** o web service do Render "dorme" após ~15 min de inatividade (a primeira requisição seguinte leva alguns segundos). O Neon também suspende o banco ocioso e religa sob demanda. Segredos (`DATABASE_URL`, `YOUVERSION_API_KEY`) ficam apenas no painel do Render, nunca no repositório.

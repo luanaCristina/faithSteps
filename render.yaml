@@ -1,0 +1,38 @@
+# ---------------------------------------------------------------------------
+# Render Blueprint - YouVersion FaithSteps API (free tier)
+# Deploy: https://dashboard.render.com/blueprints -> "New Blueprint Instance"
+# Aponte para este repositorio; o Render le este arquivo automaticamente.
+#
+# Banco de dados: usamos Neon (Postgres gratuito). Cole a connection string
+# do Neon na variavel DATABASE_URL (marcada como sync:false -> pedida no deploy).
+# ---------------------------------------------------------------------------
+services:
+  - type: web
+    name: faithsteps-api
+    runtime: node
+    plan: free
+    region: oregon
+    branch: main
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Roda as migrations automaticamente no primeiro boot (cria as tabelas no Neon).
+      - key: RUN_MIGRATIONS_ON_BOOT
+        value: "true"
+      # Connection string do Neon (postgresql://user:pass@host/db?sslmode=require).
+      # Preenchida no painel do Render no momento do deploy.
+      - key: DATABASE_URL
+        sync: false
+      - key: DB_SSL
+        value: "true"
+      # YouVersion API real. Cole a chave no painel do Render (nunca commitar).
+      - key: YOUVERSION_API_KEY
+        sync: false
+      - key: YOUVERSION_API_BASE_URL
+        value: https://api.youversion.com/v1
+      - key: YOUVERSION_USE_MOCK
+        value: "false"

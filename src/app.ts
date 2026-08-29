@@ -9,6 +9,15 @@ export const app = express();
 
 app.use(express.json());
 
+// Raiz: identifica o servico e serve de healthcheck simples para a plataforma.
+app.get('/', (_req, res) => {
+  res.json({
+    name: 'YouVersion FaithSteps API',
+    status: 'ok',
+    docs: '/api/health',
+  });
+});
+
 app.use('/api', router);
 
 // Handler de erros centralizado -> formato { error: { code, message, details? } }

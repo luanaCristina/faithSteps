@@ -1,11 +1,13 @@
 /**
  * Runner de migracoes: executa os arquivos .sql de /migrations em ordem.
+ * Pode ser chamado via CLI (npm run migrate) ou no boot da aplicacao.
  */
 import { readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { pool } from './database';
 
-async function runMigrations(): Promise<void> {
+/** Aplica todas as migrations .sql em ordem no pool da aplicacao. */
+export async function runMigrations(): Promise<void> {
   const dir = join(__dirname, '..', '..', 'migrations');
   const files = readdirSync(dir)
     .filter((f) => f.endsWith('.sql'))
@@ -22,10 +24,13 @@ async function runMigrations(): Promise<void> {
   console.log(`Concluido. ${files.length} migracao(oes) aplicada(s).`);
 }
 
-runMigrations()
-  .then(() => pool.end())
-  .catch((err) => {
-    // eslint-disable-next-line no-console
-    console.error('Falha ao migrar:', err);
-    pool.end().finally(() => process.exit(1));
-  });
+// Execucao direta via CLI: `ts-node src/config/migrate.ts` ou `node dist/...`.
+if (require.main === module) {
+  runMigrations()
+    .then(() => pool.end())
+    .catch((err) => {
+      // eslint-disable-next-line no-console
+      console.error('Falha ao migrar:', err);
+      pool.end().finally(() => process.exit(1));
+    });
+}

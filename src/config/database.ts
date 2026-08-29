@@ -1,16 +1,25 @@
 /**
  * Pool PostgreSQL e helper de query.
  */
-import { Pool, PoolClient, QueryResult, QueryResultRow } from 'pg';
+import { Pool, PoolClient, PoolConfig, QueryResult, QueryResultRow } from 'pg';
 import { config } from './index';
 
-export const pool = new Pool({
-  host: config.db.host,
-  port: config.db.port,
-  database: config.db.name,
-  user: config.db.user,
-  password: config.db.password,
-});
+// SSL habilitado via DB_SSL ou implicitamente quando ha DATABASE_URL (Neon/Render).
+const sslEnabled = config.db.ssl || Boolean(config.db.url);
+const sslOption = sslEnabled ? { rejectUnauthorized: false } : undefined;
+
+const poolConfig: PoolConfig = config.db.url
+  ? { connectionString: config.db.url, ssl: sslOption }
+  : {
+      host: config.db.host,
+      port: config.db.port,
+      database: config.db.name,
+      user: config.db.user,
+      password: config.db.password,
+      ssl: sslOption,
+    };
+
+export const pool = new Pool(poolConfig);
 
 export function query<T extends QueryResultRow = QueryResultRow>(
   text: string,

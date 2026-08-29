@@ -14,12 +14,21 @@ export const config = {
   nodeEnv: process.env.NODE_ENV ?? 'development',
 
   db: {
+    // Provedores gerenciados (Neon/Render) fornecem uma connection string unica.
+    // Quando presente, ela tem prioridade sobre os campos individuais.
+    url: process.env.DATABASE_URL ?? '',
     host: process.env.DB_HOST ?? 'localhost',
     port: int(process.env.DB_PORT, 5432),
     name: process.env.DB_NAME ?? 'faithsteps',
     user: process.env.DB_USER ?? 'postgres',
     password: process.env.DB_PASSWORD ?? 'postgres',
+    // SSL obrigatorio na maioria dos Postgres gerenciados (Neon exige).
+    ssl: (process.env.DB_SSL ?? 'false').toLowerCase() === 'true',
   },
+
+  // Executa migrations automaticamente ao subir (util no free tier).
+  runMigrationsOnBoot:
+    (process.env.RUN_MIGRATIONS_ON_BOOT ?? 'false').toLowerCase() === 'true',
 
   youversion: {
     baseUrl: process.env.YOUVERSION_API_BASE_URL ?? 'https://api.youversion.com/v1',
