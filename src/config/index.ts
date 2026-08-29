@@ -35,10 +35,12 @@ export const config = {
     apiKey: process.env.YOUVERSION_API_KEY ?? '',
     useMock: (process.env.YOUVERSION_USE_MOCK ?? 'false').toLowerCase() === 'true',
     // version_id da Biblia por idioma (YouVersion Platform).
-    // PT=129 (NVI), EN=111 (NIV). Ajustaveis por env.
+    // Default 3034 (BSB, dominio publico) - versao liberada para apps free.
+    // Versoes com copyright (ex.: NVI=129, NIV=111) exigem acesso concedido a app,
+    // senao a API retorna 404. Ajuste por env se sua app tiver acesso.
     versionId: {
-      [Language.PT]: int(process.env.YOUVERSION_VERSION_ID_PT, 129),
-      [Language.EN]: int(process.env.YOUVERSION_VERSION_ID_EN, 111),
+      [Language.PT]: int(process.env.YOUVERSION_VERSION_ID_PT, 3034),
+      [Language.EN]: int(process.env.YOUVERSION_VERSION_ID_EN, 3034),
     },
   },
 
