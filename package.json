@@ -10,7 +10,7 @@
   },
   "scripts": {
     "dev": "ts-node src/server.ts",
-    "build": "node ./node_modules/typescript/bin/tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json",
     "start": "node dist/bootstrap-paths.js",
     "test": "jest --run-in-band --testPathIgnorePatterns \"/node_modules/\" \"db.integration.test.ts$\"",
     "test:db": "jest --run-in-band db.integration.test.ts",
