@@ -1,0 +1,16 @@
+node_modules/
+dist/
+coverage/
+*.log
+
+# Variaveis de ambiente e segredos - NUNCA commitar
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+
+# Editor
+.vscode/*
+!.vscode/extensions.json

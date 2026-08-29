@@ -1,0 +1,135 @@
+/**
+ * Repositorio de progresso: user_progress + chapter_completions.
+ * A idempotencia de capitulos apoia-se na UNIQUE de chapter_completions.
+ */
+import { PoolClient } from 'pg';
+import { pool } from '@/config/database';
+import { Language, ProgressStatus, UserProgress } from '@/models';
+
+type Queryable = Pick<PoolClient, 'query'> | typeof pool;
+
+interface ProgressRow {
+  id: string;
+  user_id: string;
+  challenge_id: string;
+  chapters_read: number;
+  xp_earned: number;
+  status: ProgressStatus;
+  started_at: Date;
+  completed_at: Date | null;
+  updated_at: Date;
+}
+
+function toEntity(row: ProgressRow): UserProgress {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    challengeId: row.challenge_id,
+    chaptersRead: row.chapters_read,
+    xpEarned: row.xp_earned,
+    status: row.status,
+    startedAt: row.started_at,
+    completedAt: row.completed_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+export const progressRepository = {
+  /**
+   * Garante um registro de progresso (cria se nao existir) e o bloqueia
+   * (FOR UPDATE) para atualizacao atomica. Usa upsert idempotente.
+   */
+  async getOrCreateForUpdate(
+    db: Queryable,
+    userId: string,
+    challengeId: string,
+  ): Promise<UserProgress> {
+    await db.query(
+      `INSERT INTO user_progress (user_id, challenge_id)
+       VALUES ($1, $2)
+       ON CONFLICT (user_id, challenge_id) DO NOTHING`,
+      [userId, challengeId],
+    );
+    const res = await db.query<ProgressRow>(
+      `SELECT * FROM user_progress
+        WHERE user_id = $1 AND challenge_id = $2
+        FOR UPDATE`,
+      [userId, challengeId],
+    );
+    return toEntity(res.rows[0]);
+  },
+
+  /**
+   * Registra a conclusao de um capitulo. Retorna false se o capitulo ja
+   * havia sido concluido (violacao da UNIQUE tratada via ON CONFLICT).
+   */
+  async recordChapterCompletion(
+    db: Queryable,
+    params: {
+      userId: string;
+      challengeId: string;
+      bookUsfm: string;
+      chapter: number;
+      language: Language;
+      xpAwarded: number;
+    },
+  ): Promise<boolean> {
+    const res = await db.query(
+      `INSERT INTO chapter_completions
+         (user_id, challenge_id, book_usfm, chapter, language, xp_awarded)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (user_id, challenge_id, book_usfm, chapter, language)
+       DO NOTHING`,
+      [
+        params.userId,
+        params.challengeId,
+        params.bookUsfm,
+        params.chapter,
+        params.language,
+        params.xpAwarded,
+      ],
+    );
+    return (res.rowCount ?? 0) > 0;
+  },
+
+  /** Atualiza contadores do progresso e status. */
+  async applyIncrement(
+    db: Queryable,
+    params: {
+      userId: string;
+      challengeId: string;
+      chaptersDelta: number;
+      xpDelta: number;
+      status: ProgressStatus;
+      completedAt: Date | null;
+    },
+  ): Promise<UserProgress> {
+    const res = await db.query<ProgressRow>(
+      `UPDATE user_progress
+         SET chapters_read = chapters_read + $3,
+             xp_earned = xp_earned + $4,
+             status = $5,
+             completed_at = $6,
+             updated_at = now()
+       WHERE user_id = $1 AND challenge_id = $2
+       RETURNING *`,
+      [
+        params.userId,
+        params.challengeId,
+        params.chaptersDelta,
+        params.xpDelta,
+        params.status,
+        params.completedAt,
+      ],
+    );
+    return toEntity(res.rows[0]);
+  },
+
+  async find(userId: string, challengeId: string): Promise<UserProgress | null> {
+    const res = await pool.query<ProgressRow>(
+      'SELECT * FROM user_progress WHERE user_id = $1 AND challenge_id = $2',
+      [userId, challengeId],
+    );
+    return res.rows[0] ? toEntity(res.rows[0]) : null;
+  },
+};
