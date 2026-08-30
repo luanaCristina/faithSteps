@@ -202,6 +202,29 @@ export const progressRepository = {
     return (res.rowCount ?? 0) > 0;
   },
 
+  /** Lista as lições de Inglês concluídas pelo usuário. */
+  async englishLessonProgress(userId: string): Promise<{ lessonId: string; completedAt: Date }[]> {
+    const res = await pool.query<{ lesson_id: string; completed_at: Date }>(
+      `SELECT lesson_id, completed_at
+         FROM english_lesson_completions
+        WHERE user_id = $1
+        ORDER BY completed_at ASC`,
+      [userId],
+    );
+    return res.rows.map((row) => ({ lessonId: row.lesson_id, completedAt: row.completed_at }));
+  },
+
+  /** Conclui uma lição de Inglês; repetir a chamada não duplica a evolução. */
+  async completeEnglishLesson(userId: string, lessonId: string): Promise<boolean> {
+    const res = await pool.query(
+      `INSERT INTO english_lesson_completions (user_id, lesson_id)
+       VALUES ($1, $2)
+       ON CONFLICT (user_id, lesson_id) DO NOTHING`,
+      [userId, lessonId],
+    );
+    return (res.rowCount ?? 0) > 0;
+  },
+
   /** Progresso por livro do usuario no desafio (para o dashboard). */
   async bookProgress(
     userId: string,

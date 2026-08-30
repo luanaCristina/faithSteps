@@ -16,6 +16,7 @@ import {
 } from '@/modules/gamification';
 import { estimateCompletionDate, percentComplete } from '@/modules/challenges-engine';
 import { bookNamePt, chaptersInBook, CHAPTERS_PER_BOOK } from '@/modules/bible-books';
+import { ENGLISH_JOURNEY } from '@/modules/tracks';
 
 export const userRoutes = Router();
 
@@ -32,6 +33,8 @@ userRoutes.get('/:id/dashboard', validate(idParams, 'params'), async (req, res, 
 
     const talents = await talentsRepository.findByUser(userId);
     const badges = await userRepository.listBadges(userId);
+    const englishCompleted = await progressRepository.englishLessonProgress(userId);
+    const totalEnglishLessons = ENGLISH_JOURNEY.reduce((total, module) => total + module.lessons.length, 0);
 
     // Desafio Biblia Toda ativo (base do dashboard de progresso).
     const [challenge] = await challengeRepository.listActive();
@@ -100,6 +103,12 @@ userRoutes.get('/:id/dashboard', validate(idParams, 'params'), async (req, res, 
       badges,
       progress: progressBlock,
       totalBibleChapters: TOTAL_BIBLE_CHAPTERS,
+      englishProgress: {
+        completedLessonIds: englishCompleted.map((lesson) => lesson.lessonId),
+        completedCount: englishCompleted.length,
+        totalLessons: totalEnglishLessons,
+        percentComplete: percentComplete(englishCompleted.length, totalEnglishLessons),
+      },
     });
   } catch (err) {
     next(err);

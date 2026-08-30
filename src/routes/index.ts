@@ -13,6 +13,7 @@ import { progressRoutes } from './progress.routes';
 import { userRoutes } from './user.routes';
 import { devRoutes } from './dev.routes';
 import { aiRoutes } from './ai.routes';
+import { englishRoutes } from './english.routes';
 import { authRoutes } from './auth.routes';
 
 const langQuery = z.object({
@@ -63,3 +64,4 @@ router.use('/progress', progressRoutes);
 router.use('/users', userRoutes);
 router.use('/dev', devRoutes);
 router.use('/ai', aiRoutes);
+router.use('/english', englishRoutes);

@@ -143,8 +143,46 @@
     .badge { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; font-size: .82rem; display: flex; align-items: center; gap: 8px; }
     .empty { color: var(--muted); font-size: .85rem; }
 
-    /* English placeholder */
+    /* Jornada de Inglês com a Bíblia */
     .english-box { background: var(--panel); border: 1px dashed var(--border); border-radius: 14px; padding: 22px; text-align: center; color: var(--muted); }
+    .english-journey-summary { background: linear-gradient(135deg, rgba(28,176,246,.12), rgba(125,92,255,.15)); border: 1px solid rgba(113,190,255,.25); border-radius: 15px; padding: 16px; margin-bottom: 18px; }
+    .english-journey-summary h3 { font-size: 1rem; margin-bottom: 5px; }
+    .english-journey-summary p { color: var(--muted); font-size: .82rem; line-height: 1.5; margin-bottom: 12px; }
+    .english-summary-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: .78rem; color: var(--muted); }
+    .english-summary-row strong { color: #fff; font-size: .9rem; }
+    .english-progress-track { height: 8px; border-radius: 99px; background: rgba(7,10,20,.5); overflow: hidden; margin-top: 8px; }
+    .english-progress-track i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--blue), var(--purple2)); transition: width .25s ease; }
+    .english-module { margin-bottom: 20px; }
+    .english-module-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+    .english-module-head h3 { font-size: 1rem; margin-bottom: 4px; }
+    .english-module-head p { color: var(--muted); font-size: .8rem; line-height: 1.45; }
+    .module-level, .lesson-level { color: var(--blue); font-size: .72rem; font-weight: 850; letter-spacing: .04em; white-space: nowrap; }
+    .english-lessons { display: grid; gap: 9px; }
+    .english-lesson { display: grid; grid-template-columns: 32px 1fr auto; align-items: center; gap: 11px; background: var(--panel); border: 1px solid var(--border); border-radius: 13px; padding: 12px 13px; cursor: pointer; transition: transform .16s, border-color .16s, background .16s; }
+    .english-lesson:hover { transform: translateY(-1px); border-color: var(--purple); background: #211e3a; }
+    .english-lesson.done { border-color: rgba(67,217,154,.42); }
+    .english-lesson.locked { opacity: .48; cursor: not-allowed; }
+    .english-lesson.locked:hover { transform: none; border-color: var(--border); background: var(--panel); }
+    .lesson-index { display: grid; place-items: center; width: 29px; height: 29px; border-radius: 50%; background: var(--panel2); color: var(--muted); font-weight: 850; font-size: .78rem; }
+    .english-lesson.done .lesson-index { background: var(--green); color: #10261d; }
+    .english-lesson h4 { font-size: .9rem; margin: 2px 0 4px; }
+    .english-lesson p { color: var(--muted); font-size: .77rem; line-height: 1.4; }
+    .lesson-meta { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 7px; color: var(--muted); font-size: .7rem; }
+    .lesson-meta span { background: rgba(15,18,32,.34); border-radius: 7px; padding: 4px 6px; }
+    .lesson-status { color: var(--green); font-size: .72rem; font-weight: 800; text-align: right; }
+    .lesson-status.lock { color: var(--muted); font-size: 1rem; }
+    .english-lesson-modal .modal-verse { background: linear-gradient(135deg, #17233b, #241b43); border: 1px solid rgba(113,190,255,.22); border-radius: 12px; padding: 14px; margin-bottom: 12px; line-height: 1.55; font-size: .92rem; font-style: italic; }
+    .english-lesson-modal .modal-verse small { display: block; color: var(--blue); font-size: .75rem; font-style: normal; font-weight: 800; margin-top: 8px; }
+    .lesson-focus { background: var(--panel2); border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; color: var(--muted); font-size: .82rem; }
+    .lesson-focus strong { color: var(--gold); }
+    .vocabulary { display: flex; flex-wrap: wrap; gap: 6px; margin: 7px 0 14px; }
+    .vocabulary span { border: 1px solid var(--border); border-radius: 8px; padding: 5px 8px; color: #dce9ff; font-size: .76rem; }
+    .lesson-practice { border-left: 3px solid var(--purple); padding: 3px 0 3px 11px; color: var(--muted); font-size: .84rem; line-height: 1.45; }
+    @media (max-width: 520px) {
+      .english-module-head { flex-direction: column; gap: 4px; }
+      .english-lesson { grid-template-columns: 30px 1fr; }
+      .lesson-status { grid-column: 2; text-align: left; }
+    }
 
     /* Modal licao */
     .overlay { position: fixed; inset: 0; background: rgba(5,7,15,.7); display: none; align-items: center; justify-content: center; padding: 18px; z-index: 50; }
@@ -227,6 +265,7 @@
       userId: null, challengeId: null, dashboard: null, tracks: null,
       axis: 'bible', section: null, book: null, current: null,
       placementLevels: {}, placement: null, view: 'auth', authMode: 'login', authUser: null,
+      englishCompleted: {}, englishLesson: null,
     };
 
     const PLACEMENT_QUESTIONS = {
@@ -350,6 +389,8 @@
     async function refresh() {
       const d = await api('/api/users/' + ctx.userId + '/dashboard');
       ctx.dashboard = d;
+      ctx.englishCompleted = {};
+      (d.englishProgress && d.englishProgress.completedLessonIds || []).forEach(id => { ctx.englishCompleted[id] = true; });
       restoreLastPosition(d);
       renderTop(d);
       renderApp(d);
@@ -510,10 +551,114 @@
       ctx.authUser = null;
       ctx.tracks = null;
       ctx.placementLevels = {};
+      ctx.englishCompleted = {};
+      ctx.englishLesson = null;
       ctx.view = 'auth';
       renderTop(null);
       showAuth('login');
       toast('Sessão encerrada.');
+    }
+
+    function findLessonInJourney(lessonId) {
+      const modules = (ctx.tracks && ctx.tracks.english && ctx.tracks.english.modules) || [];
+      for (const module of modules) {
+        const lesson = module.lessons.find(item => item.id === lessonId);
+        if (lesson) return lesson;
+      }
+      return null;
+    }
+
+    function openEnglishLesson(lessonId) {
+      const lesson = findLessonInJourney(lessonId);
+      if (!lesson || (ctx.englishCompleted[lessonId] === false)) return;
+      ctx.englishLesson = lesson;
+      ctx.placement = null;
+      ctx.current = null;
+      document.getElementById('overlay').classList.add('open');
+      renderEnglishLessonModal();
+    }
+
+    function renderEnglishLessonModal() {
+      const lesson = ctx.englishLesson;
+      if (!lesson) return;
+      const completed = !!ctx.englishCompleted[lesson.id];
+      document.getElementById('q-title').textContent = 'Lição ' + lesson.id.replace('eng-', '') + ' · ' + lesson.title;
+      document.getElementById('q-ref').textContent = 'Jornada de Inglês com a Bíblia';
+      document.getElementById('q-body').innerHTML =
+        '<div class="english-lesson-modal">' +
+          '<p class="q">' + escapeHtml(lesson.description) + '</p>' +
+          '<div class="modal-verse">“' + escapeHtml(lesson.verse) + '<small>📖 ' + escapeHtml(lesson.reference.replace('.', ' ')) + '</small></div>' +
+          '<div class="lesson-focus"><strong>Foco da aula:</strong> ' + escapeHtml(lesson.focus) + '</div>' +
+          '<div class="muted">Vocabulário-chave</div>' +
+          '<div class="vocabulary">' + lesson.vocabulary.map(word => '<span>' + escapeHtml(word) + '</span>').join('') + '</div>' +
+          '<div class="lesson-practice"><strong>Prática:</strong> ' + escapeHtml(lesson.practice) + '</div>' +
+        '</div>';
+      document.getElementById('q-confirm').textContent = completed ? 'Lição concluída' : 'Concluir lição';
+      document.getElementById('q-confirm').disabled = completed;
+      document.getElementById('q-skip').textContent = 'Fechar';
+    }
+
+    async function completeEnglishLesson() {
+      const lesson = ctx.englishLesson;
+      if (!lesson || ctx.englishCompleted[lesson.id]) {
+        closeModal();
+        return;
+      }
+      const confirm = document.getElementById('q-confirm');
+      confirm.disabled = true;
+      confirm.textContent = 'Salvando...';
+      try {
+        const response = await api('/api/english/lessons/' + lesson.id + '/complete', { method: 'POST' });
+        ctx.englishCompleted[lesson.id] = true;
+        closeModal();
+        toast(response.newlyCompleted ? 'Lição concluída. Continue caminhando!' : 'Lição revisada.');
+        await refresh();
+      } catch (_) {
+        confirm.disabled = false;
+        confirm.textContent = 'Concluir lição';
+        toast('Não foi possível salvar a lição. Tente novamente.');
+      }
+    }
+
+    function renderEnglishJourney(d) {
+      const journey = ctx.tracks && ctx.tracks.english;
+      const modules = (journey && journey.modules) || [];
+      if (!modules.length) return '<div class="english-box">A jornada de Inglês estará disponível em breve.</div>';
+
+      const totalLessons = journey.totalLessons || modules.reduce((total, module) => total + module.lessons.length, 0);
+      const completedCount = d.englishProgress ? d.englishProgress.completedCount : Object.keys(ctx.englishCompleted).length;
+      const percent = d.englishProgress ? d.englishProgress.percentComplete : Math.round((completedCount / totalLessons) * 100);
+      const level = placementLevelFor('english', d);
+      let nextLesson = null;
+      modules.some(module => module.lessons.some(lesson => {
+        if (!ctx.englishCompleted[lesson.id]) { nextLesson = lesson; return true; }
+        return false;
+      }));
+
+      let journeyIndex = 0;
+      let journeyUnlocked = true;
+      const moduleHtml = modules.map(module => {
+        const moduleCompleted = module.lessons.filter(lesson => ctx.englishCompleted[lesson.id]).length;
+        const lessonsHtml = module.lessons.map(lesson => {
+          journeyIndex += 1;
+          const done = !!ctx.englishCompleted[lesson.id];
+          const locked = !done && !journeyUnlocked;
+          const status = done ? '✓ Concluída' : (locked ? '🔒 Bloqueada' : 'Começar');
+          const handler = locked ? '' : `onclick="openEnglishLesson('${lesson.id}')"`;
+          if (!done) journeyUnlocked = false;
+          else journeyUnlocked = true;
+          return '<div class="english-lesson ' + (done ? 'done ' : '') + (locked ? 'locked' : '') + '" role="button" tabindex="' + (locked ? '-1' : '0') + '" ' + handler + '>' +
+            '<div class="lesson-index">' + (done ? '✓' : journeyIndex) + '</div>' +
+            '<div><span class="lesson-level">' + escapeHtml(lesson.level) + '</span><h4>' + escapeHtml(lesson.title) + '</h4><p>' + escapeHtml(lesson.description) + '</p>' +
+            '<div class="lesson-meta"><span>📖 ' + escapeHtml(lesson.reference.replace('.', ' ')) + '</span><span>Foco: ' + escapeHtml(lesson.focus) + '</span></div></div>' +
+            '<div class="lesson-status ' + (locked ? 'lock' : '') + '">' + status + '</div>' +
+          '</div>';
+        }).join('');
+        return '<section class="english-module"><div class="english-module-head"><div><h3>' + escapeHtml(module.name) + '</h3><p>' + escapeHtml(module.description) + '</p></div><span class="module-level">' + escapeHtml(module.level) + ' · ' + moduleCompleted + '/' + module.lessons.length + '</span></div><div class="english-lessons">' + lessonsHtml + '</div></section>';
+      }).join('');
+
+      const nextButton = nextLesson ? `<button class="btn" type="button" onclick="openEnglishLesson('${nextLesson.id}')">Continuar: ${escapeHtml(nextLesson.title)}</button>` : '<div class="resume-note">✓ Jornada concluída. Continue revisando as lições e praticando.</div>';
+      return '<div class="english-journey-summary"><h3>Jornada de Inglês com a Bíblia</h3><p>Leia passagens conhecidas, aprenda vocabulário e pratique estruturas da língua em uma sequência que vai do essencial à leitura avançada.</p><div class="english-summary-row"><span><strong>' + completedCount + ' de ' + totalLessons + '</strong> lições concluídas</span><span>Seu ponto de partida: <strong>' + escapeHtml(level.level) + '</strong></span></div><div class="english-progress-track"><i style="width:' + percent + '%"></i></div><div class="about-cta">' + nextButton + '</div></div>' + moduleHtml;
     }
 
     function renderApp(d) {
@@ -565,7 +710,7 @@
 
       let body;
       if (ctx.axis === 'english') {
-        body = axisHeader + '<div class="english-box">Lições bilíngues a partir dos capítulos que você lê. Faça o teste de nivelamento para registrar seu ponto de partida e receber um nível de inglês para a jornada.</div>';
+        body = axisHeader + renderEnglishJourney(d);
       } else {
         body = axisHeader +
           '<div class="section-title">Trilha Principal</div>' +
@@ -692,6 +837,10 @@
         else advancePlacement();
         return;
       }
+      if (ctx.englishLesson) {
+        completeEnglishLesson();
+        return;
+      }
       completeChapter(true);
     }
 
@@ -699,6 +848,10 @@
       if (ctx.placement) {
         if (ctx.placement.result) openPlacement(ctx.placement.axis);
         else closeModal();
+        return;
+      }
+      if (ctx.englishLesson) {
+        closeModal();
         return;
       }
       completeChapter(false);
@@ -777,6 +930,7 @@
     function closeModal() {
       document.getElementById('overlay').classList.remove('open');
       ctx.placement = null;
+      ctx.englishLesson = null;
     }
 
     async function completeChapter(withQuiz) {

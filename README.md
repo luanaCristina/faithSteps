@@ -82,6 +82,8 @@ O progresso de capítulos, XP, Talentos, ofensiva e insígnias continua sendo pe
 
 A página **Sobre** explica a proposta, os dois eixos de aprendizagem, o funcionamento do progresso e a retomada da jornada. Ela permanece acessível mesmo para visitantes que ainda não fizeram login.
 
+A aba **Inglês** oferece uma jornada bíblico-bilíngue com 20 lições em cinco módulos: *First Steps*, *Walking with Jesus*, *Truth that transforms*, *Discipleship & service* e *Exegesis & leadership*. Cada lição combina uma referência bíblica, um versículo em inglês, vocabulário-chave, foco gramatical e uma prática. As etapas são desbloqueadas progressivamente, e cada conclusão é persistida por usuário na tabela `english_lesson_completions` através de `POST /api/english/lessons/:lessonId/complete`.
+
 ## Como rodar
 
 ```bash
