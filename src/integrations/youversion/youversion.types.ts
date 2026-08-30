@@ -47,3 +47,16 @@ export interface VerseOfTheDay {
   /** Data ISO (YYYY-MM-DD) a que o versiculo se refere. */
   date: string;
 }
+
+/**
+ * Passagem biblica (capitulo, versiculo ou intervalo) conforme o endpoint
+ * /bibles/{id}/passages/{ref} da YouVersion Platform.
+ */
+export interface BiblePassage {
+  /** Referencia USFM solicitada (ex.: 'JHN.3', 'JHN.3.16'). */
+  id: string;
+  /** Texto da passagem. */
+  content: string;
+  /** Referencia canonica legivel (ex.: 'John 3'). */
+  reference: string;
+}

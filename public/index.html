@@ -83,6 +83,14 @@
     .modal h3 { font-size: 1.15rem; margin-bottom: 6px; }
     .modal .ref { color: var(--purple2); font-weight: 700; margin-bottom: 14px; }
     .modal p.q { font-size: .95rem; margin-bottom: 12px; }
+    .modal .scripture { background: var(--panel2); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; max-height: 200px; overflow: auto; font-size: .9rem; line-height: 1.55; }
+    .modal .scripture-ref { color: var(--purple2); font-weight: 700; font-size: .8rem; margin-bottom: 6px; }
+    .modal .ai-card { background: linear-gradient(135deg, #1a2540, #241a4a); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; font-size: .85rem; }
+    .modal .ai-card .ai-tag { color: var(--blue); font-weight: 800; font-size: .78rem; margin-bottom: 6px; }
+    .modal .ai-card p { margin-bottom: 6px; }
+    .modal .ai-card .apply { color: var(--gold); }
+    .modal .quiz-card { margin-top: 4px; }
+    .muted { color: var(--muted); }
     .opt { display: block; width: 100%; text-align: left; background: var(--panel2); border: 2px solid var(--border); color: var(--text); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; cursor: pointer; font-size: .9rem; }
     .opt:hover { border-color: var(--purple); }
     .opt.sel { border-color: var(--blue); }
@@ -133,12 +141,6 @@
       { usfm: 'JON', name: 'Jonas', chapters: 4 },
       { usfm: 'RUT', name: 'Rute', chapters: 4 },
     ];
-
-    // Banco simples de quizzes por livro (1 pergunta genérica por capítulo).
-    const QUIZ = {
-      JHN: { q: 'Qual é o tema central do Evangelho de João?', opts: ['O amor de Deus e a vida em Cristo', 'A genealogia dos reis', 'As leis cerimoniais'], answer: 0 },
-      default: { q: 'Qual atitude a leitura da Palavra cultiva?', opts: ['Ansiedade por desempenho', 'Constância amorosa e fé', 'Competição com o próximo'], answer: 1 },
-    };
 
     function toast(msg) {
       const el = document.getElementById('toast');
@@ -236,20 +238,56 @@
 
     function selectBook(usfm) { ctx.book = usfm; renderApp(ctx.dashboard); }
 
-    // Abre o "quiz" do capítulo antes de concluir.
-    function openChapter(usfm, chapter) {
-      ctx.current = { usfm, chapter, selected: null };
+    // Abre a lição: texto do capítulo (YouVersion) + tutor de IA (resumo + quiz).
+    async function openChapter(usfm, chapter) {
       const book = BOOKS.find(b => b.usfm === usfm);
-      const quiz = QUIZ[usfm] || QUIZ.default;
+      const ref = usfm + '.' + chapter;
+      ctx.current = { usfm, chapter, ref, selected: null, quiz: null };
+
       document.getElementById('q-title').textContent = 'Lição: ' + book.name + ' ' + chapter;
-      document.getElementById('q-ref').textContent = 'Leia ' + book.name + ' capítulo ' + chapter + ' e responda:';
-      document.getElementById('q-body').innerHTML =
-        '<p class="q">' + quiz.q + '</p>' +
-        quiz.opts.map((o, idx) => '<button class="opt" data-idx="' + idx + '" onclick="selectOpt(' + idx + ')">' + o + '</button>').join('');
-      const confirm = document.getElementById('q-confirm');
-      confirm.disabled = true;
-      confirm.textContent = 'Concluir capítulo';
+      document.getElementById('q-ref').textContent = 'Leitura + Tutor de IA';
+      document.getElementById('q-body').innerHTML = '<p class="q">Carregando a Palavra e o Tutor...</p>';
+      document.getElementById('q-confirm').disabled = true;
       document.getElementById('overlay').classList.add('open');
+
+      // Busca em paralelo: texto do capítulo, resumo bilíngue e quiz da IA.
+      const lang = 'pt';
+      const [passage, summary, quiz] = await Promise.all([
+        api('/api/bible/passage?ref=' + ref + '&language=' + lang).catch(() => null),
+        api('/api/ai/chapter-summary?ref=' + ref + '&language=' + lang).catch(() => null),
+        api('/api/ai/quiz?ref=' + ref + '&language=' + lang).catch(() => []),
+      ]);
+
+      ctx.current.quiz = (Array.isArray(quiz) && quiz.length) ? quiz[0] : null;
+
+      const textBlock = passage
+        ? '<div class="scripture"><div class="scripture-ref">' + (passage.reference || ref) + '</div>' +
+          '<p>' + escapeHtml(passage.content || '') + '</p></div>'
+        : '<div class="scripture"><p class="muted">Texto indisponível no momento.</p></div>';
+
+      const aiBlock = summary
+        ? '<div class="ai-card"><div class="ai-tag">🤖 Tutor IA</div>' +
+          '<p><strong>PT:</strong> ' + escapeHtml(summary.summaryPt || '') + '</p>' +
+          '<p><strong>EN:</strong> ' + escapeHtml(summary.summaryEn || '') + '</p>' +
+          (summary.application ? '<p class="apply">🙏 ' + escapeHtml(summary.application) + '</p>' : '') +
+          '</div>'
+        : '';
+
+      let quizBlock = '';
+      if (ctx.current.quiz) {
+        const q = ctx.current.quiz;
+        quizBlock = '<div class="quiz-card"><p class="q">' + escapeHtml(q.question) + '</p>' +
+          q.options.map((o, idx) => '<button class="opt" data-idx="' + idx + '" onclick="selectOpt(' + idx + ')">' + escapeHtml(o) + '</button>').join('') +
+          '</div>';
+      }
+
+      document.getElementById('q-body').innerHTML = textBlock + aiBlock + quizBlock;
+      // Sem quiz disponível, permite concluir direto.
+      document.getElementById('q-confirm').disabled = ctx.current.quiz ? true : false;
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     }
 
     function selectOpt(idx) {
@@ -261,9 +299,8 @@
     function closeModal() { document.getElementById('overlay').classList.remove('open'); }
 
     async function completeChapter(withQuiz) {
-      const { usfm, chapter, selected } = ctx.current;
-      const quiz = QUIZ[usfm] || QUIZ.default;
-      const quizPassed = withQuiz && selected === quiz.answer;
+      const { usfm, chapter, selected, quiz } = ctx.current;
+      const quizPassed = withQuiz && !!quiz && selected === quiz.answerIndex;
       try {
         const r = await api('/api/progress/complete-chapter', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },

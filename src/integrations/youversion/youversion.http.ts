@@ -11,6 +11,7 @@ import { YouVersionService } from './youversion.service';
 import {
   BibleBook,
   BibleChapter,
+  BiblePassage,
   ReadingPlan,
   VerseOfTheDay,
 } from './youversion.types';
@@ -57,6 +58,11 @@ interface YvVerseOfDay {
   content?: string;
   text?: string;
   date?: string;
+}
+interface YvPassage {
+  id?: string;
+  content?: string;
+  reference?: string;
 }
 
 export class HttpYouVersionService implements YouVersionService {
@@ -142,6 +148,18 @@ export class HttpYouVersionService implements YouVersionService {
       .filter((c) => Number.isFinite(c.chapter));
   }
 
+  async getPassage(ref: string, language: Language): Promise<BiblePassage> {
+    const versionId = this.versionFor(language);
+    const body = await this.request<YvPassage>(
+      `/bibles/${versionId}/passages/${encodeURIComponent(ref)}`,
+    );
+    return {
+      id: body.id ?? ref,
+      content: body.content ?? '',
+      reference: body.reference ?? ref,
+    };
+  }
+
   getReadingPlan(_planId: string, _language: Language): Promise<ReadingPlan> {
     // A API de Reading Plans nao esta coberta por este cliente ainda.
     throw new AppError(
@@ -152,22 +170,13 @@ export class HttpYouVersionService implements YouVersionService {
   }
 
   async getVerseOfTheDay(language: Language): Promise<VerseOfTheDay> {
-    // Dia do ano (1..366) para o endpoint /verse-of-the-days/{day}.
-    const now = new Date();
-    const start = Date.UTC(now.getUTCFullYear(), 0, 0);
-    const dayOfYear = Math.floor((now.getTime() - start) / 86_400_000);
-    const versionId = this.versionFor(language);
-
-    const body = await this.request<YvVerseOfDay>(
-      `/verse-of-the-days/${dayOfYear}`,
-      { version_id: String(versionId) },
-    );
-
+    // Usa uma passagem fixa como "versiculo do dia" (endpoint /passages e estavel).
+    const passage = await this.getPassage('JHN.3.16', language);
     return {
-      reference: body.reference?.human ?? body.reference_human ?? '',
-      text: body.content ?? body.text ?? '',
+      reference: passage.reference,
+      text: passage.content,
       language,
-      date: body.date ?? now.toISOString().slice(0, 10),
+      date: new Date().toISOString().slice(0, 10),
     };
   }
 }

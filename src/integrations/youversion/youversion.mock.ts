@@ -7,6 +7,7 @@ import { YouVersionService } from './youversion.service';
 import {
   BibleBook,
   BibleChapter,
+  BiblePassage,
   ReadingPlan,
   VerseOfTheDay,
 } from './youversion.types';
@@ -40,6 +41,14 @@ export class MockYouVersionService implements YouVersionService {
       chapter: i + 1,
       reference: `${label} ${i + 1}`,
     }));
+  }
+
+  async getPassage(ref: string, language: Language): Promise<BiblePassage> {
+    const text =
+      language === Language.EN
+        ? `[EN] Sample passage text for ${ref}.`
+        : `[PT] Texto de exemplo da passagem ${ref}.`;
+    return { id: ref, content: text, reference: ref.replace(/\./g, ' ') };
   }
 
   async getReadingPlan(planId: string, language: Language): Promise<ReadingPlan> {

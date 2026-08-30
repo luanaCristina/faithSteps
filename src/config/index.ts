@@ -50,6 +50,18 @@ export const config = {
       [Language.EN]: int(process.env.XP_PER_CHAPTER_EN, XP_PER_CHAPTER[Language.EN]),
     },
   },
+
+  ai: {
+    // 'mock' (default, gratis) ou 'gemini' (requer GEMINI_API_KEY).
+    provider: (process.env.AI_PROVIDER ?? 'mock').toLowerCase() as 'mock' | 'gemini',
+    gemini: {
+      apiKey: process.env.GEMINI_API_KEY ?? '',
+      model: process.env.GEMINI_MODEL ?? 'gemini-1.5-flash',
+      baseUrl:
+        process.env.GEMINI_BASE_URL ??
+        'https://generativelanguage.googleapis.com/v1beta',
+    },
+  },
 };
 
 export type AppConfig = typeof config;

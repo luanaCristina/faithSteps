@@ -6,24 +6,12 @@ import { z } from 'zod';
 import { Language } from '@/models';
 import { config } from '@/config';
 import { validate } from '@/middleware/validate';
-import {
-  HttpYouVersionService,
-  MockYouVersionService,
-  YouVersionService,
-} from '@/integrations/youversion';
+import { youversion } from '@/integrations/youversion/client';
 import { challengeRoutes } from './challenge.routes';
 import { progressRoutes } from './progress.routes';
 import { userRoutes } from './user.routes';
 import { devRoutes } from './dev.routes';
-
-// Seleciona a implementacao (mock em staging) a partir da config.
-const youversion: YouVersionService = config.youversion.useMock
-  ? new MockYouVersionService()
-  : new HttpYouVersionService({
-      baseUrl: config.youversion.baseUrl,
-      apiKey: config.youversion.apiKey,
-      versionId: config.youversion.versionId,
-    });
+import { aiRoutes } from './ai.routes';
 
 const langQuery = z.object({
   language: z.nativeEnum(Language).default(Language.PT),
@@ -51,7 +39,21 @@ router.get('/bible/verse-of-the-day', validate(langQuery, 'query'), async (req, 
   }
 });
 
+// GET /api/bible/passage?ref=JHN.3&language=pt -> texto do capitulo/versiculo.
+const passageQuery = langQuery.extend({
+  ref: z.string().min(1).max(40).regex(/^[A-Za-z0-9.\-]+$/, 'Referencia USFM invalida.'),
+});
+router.get('/bible/passage', validate(passageQuery, 'query'), async (req, res, next) => {
+  try {
+    const { ref, language } = req.query as unknown as { ref: string; language: Language };
+    res.json(await youversion.getPassage(ref, language));
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.use('/challenges', challengeRoutes);
 router.use('/progress', progressRoutes);
 router.use('/users', userRoutes);
 router.use('/dev', devRoutes);
+router.use('/ai', aiRoutes);

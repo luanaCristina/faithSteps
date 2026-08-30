@@ -36,3 +36,9 @@ services:
         value: https://api.youversion.com/v1
       - key: YOUVERSION_USE_MOCK
         value: "false"
+      # Tutor de IA: 'mock' (gratis) por padrao. Troque para 'gemini' e
+      # preencha GEMINI_API_KEY no painel para ativar o LLM real.
+      - key: AI_PROVIDER
+        value: "mock"
+      - key: GEMINI_API_KEY
+        sync: false
