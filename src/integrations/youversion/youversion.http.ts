@@ -69,7 +69,11 @@ export class HttpYouVersionService implements YouVersionService {
   constructor(private readonly config: YouVersionHttpConfig) {}
 
   private async request<T>(path: string, query: Record<string, string> = {}): Promise<T> {
-    const url = new URL(path, this.config.baseUrl);
+    // Concatena preservando o prefixo da base (ex.: '/v1'). Usar new URL com
+    // path absoluto descartaria o '/v1' da baseUrl -> 404.
+    const base = this.config.baseUrl.replace(/\/+$/, '');
+    const rel = path.replace(/^\/+/, '');
+    const url = new URL(`${base}/${rel}`);
     for (const [key, value] of Object.entries(query)) {
       url.searchParams.set(key, value);
     }

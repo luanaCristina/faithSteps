@@ -56,7 +56,7 @@ export const config = {
     provider: (process.env.AI_PROVIDER ?? 'mock').toLowerCase() as 'mock' | 'gemini',
     gemini: {
       apiKey: process.env.GEMINI_API_KEY ?? '',
-      model: process.env.GEMINI_MODEL ?? 'gemini-1.5-flash',
+      model: process.env.GEMINI_MODEL ?? 'gemini-3.5-flash-lite',
       baseUrl:
         process.env.GEMINI_BASE_URL ??
         'https://generativelanguage.googleapis.com/v1beta',
