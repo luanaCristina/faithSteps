@@ -59,6 +59,15 @@
     .axis-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
     .axis-tab { flex: 1; text-align: center; padding: 10px; border-radius: 12px; background: var(--panel); border: 1px solid var(--border); font-weight: 700; font-size: .9rem; color: var(--muted); cursor: pointer; }
     .axis-tab.active { background: var(--purple); color: #fff; border-color: var(--purple); }
+    .axis-panel-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin: 18px 0 12px; }
+    .axis-panel-copy { min-width: 0; }
+    .axis-panel-head h2 { font-size: 1rem; margin-bottom: 4px; }
+    .axis-panel-head p { color: var(--muted); font-size: .82rem; line-height: 1.4; }
+    .placement-button { flex: 0 0 auto; border: 1px solid var(--purple); color: #fff; background: rgba(125,92,255,.18); border-radius: 10px; padding: 9px 12px; font-size: .78rem; font-weight: 800; cursor: pointer; transition: transform .16s, background .16s; }
+    .placement-button:hover { background: var(--purple); }
+    .placement-button:active { transform: scale(.97); }
+    .book-pill { gap: 5px; }
+    .book-pill small { color: inherit; opacity: .78; font-size: .68rem; font-weight: 600; }
 
     .pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: var(--panel); border: 1px solid var(--border); font-size: .82rem; color: var(--muted); cursor: pointer; }
     .pill.active { background: var(--purple); color: #fff; border-color: var(--purple); }
@@ -114,6 +123,25 @@
     .modal .ai-card p { margin-bottom: 6px; }
     .modal .ai-card .apply { color: var(--gold); }
     .modal .quiz-card { margin-top: 4px; }
+    .placement-progress { color: var(--muted); font-size: .78rem; margin-bottom: 12px; }
+    .placement-question { font-size: 1rem; font-weight: 750; line-height: 1.45; margin-bottom: 14px; }
+    .placement-option { display: block; width: 100%; text-align: left; background: var(--panel2); border: 2px solid var(--border); color: var(--text); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; cursor: pointer; font-size: .9rem; transition: border-color .16s, background .16s, transform .16s; }
+    .placement-option:hover { border-color: var(--purple); }
+    .placement-option:active { transform: scale(.99); }
+    .placement-option.sel { border-color: var(--blue); background: rgba(28,176,246,.12); }
+    .placement-result { text-align: center; padding: 8px 0 4px; }
+    .placement-result .level-mark { color: var(--gold); font-size: 2rem; font-weight: 900; margin: 6px 0 8px; }
+    .placement-result p { color: var(--muted); line-height: 1.5; font-size: .9rem; }
+    .axis-levels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 12px 0 2px; }
+    .axis-level { background: rgba(15,18,32,.28); border: 1px solid rgba(255,255,255,.12); border-radius: 10px; padding: 8px 10px; min-width: 0; }
+    .axis-level span { display: block; color: var(--muted); font-size: .72rem; margin-bottom: 3px; }
+    .axis-level strong { display: block; color: #fff; font-size: .84rem; }
+    .axis-level small { display: block; color: var(--muted); font-size: .7rem; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    @media (max-width: 520px) {
+      .axis-panel-head { flex-direction: column; }
+      .placement-button { width: 100%; }
+      .axis-levels { grid-template-columns: 1fr; }
+    }
     .muted { color: var(--muted); }
     .opt { display: block; width: 100%; text-align: left; background: var(--panel2); border: 2px solid var(--border); color: var(--text); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; cursor: pointer; font-size: .9rem; }
     .opt:hover { border-color: var(--purple); }
@@ -157,6 +185,41 @@
     let ctx = {
       userId: null, challengeId: null, dashboard: null, tracks: null,
       axis: 'bible', section: null, book: null, current: null,
+      placementLevels: {}, placement: null,
+    };
+
+    const PLACEMENT_QUESTIONS = {
+      bible: [
+        { question: 'Quantos livros compõem a Bíblia na tradição cristã protestante?', options: ['39', '66', '73', '1.189'], correctIndex: 1 },
+        { question: 'Qual conjunto reúne os quatro Evangelhos?', options: ['Mateus, Marcos, Lucas e João', 'Romanos, Gálatas, Efésios e Filipenses', 'Gênesis, Êxodo, Levítico e Números', 'Salmos, Provérbios, Jó e Eclesiastes'], correctIndex: 0 },
+        { question: 'Ao estudar um capítulo, qual prática ajuda a respeitar melhor seu contexto?', options: ['Ler apenas uma frase isolada', 'Ignorar quem escreveu e para quem foi escrito', 'Observar o contexto literário, histórico e a intenção do texto', 'Escolher a interpretação mais popular'], correctIndex: 2 },
+        { question: 'Qual livro é conhecido por reunir muitos cânticos e orações?', options: ['Salmos', 'Atos', 'Apocalipse', 'Neemias'], correctIndex: 0 },
+        { question: 'Uma leitura bíblica madura busca principalmente:', options: ['Vencer debates', 'Aplicar o texto com fidelidade, amor e discernimento', 'Memorizar números sem compreender', 'Substituir a comunidade por opiniões individuais'], correctIndex: 1 },
+      ],
+      english: [
+        { question: 'In the Bible, the word “grace” is closest in meaning to:', options: ['Free and undeserved kindness', 'A difficult battle', 'A place to live', 'A musical instrument'], correctIndex: 0 },
+        { question: 'Choose the sentence that means “Jesus ama seus discípulos”.', options: ['Jesus loved his disciples.', 'Jesus is loving his disciples yesterday.', 'Jesus love his disciples.', 'Jesus will loved his disciples.'], correctIndex: 0 },
+        { question: 'What does “I have read the chapter” communicate?', options: ['I am going to read it tomorrow.', 'I finished reading it at some point before now.', 'I never opened the chapter.', 'I am writing the chapter.'], correctIndex: 1 },
+        { question: 'In “Although the passage is difficult, I can understand it”, “although” introduces:', options: ['A contrast', 'A location', 'A quantity', 'A greeting'], correctIndex: 0 },
+        { question: 'In a theological context, “sanctification” refers to:', options: ['The process of being made holy', 'The act of changing a book cover', 'A type of travel', 'The beginning of a meal'], correctIndex: 0 },
+      ],
+    };
+
+    const PLACEMENT_LEVELS = {
+      bible: [
+        { level: 1, title: 'Aprendiz da Palavra', description: 'Fundamentos para cultivar o hábito de leitura e conhecer a narrativa bíblica.' },
+        { level: 2, title: 'Discípulo Caminhante', description: 'Boa base para avançar pelos Evangelhos e aplicar a Palavra no cotidiano.' },
+        { level: 3, title: 'Guardião da Palavra', description: 'Leitura consistente com atenção a contexto, prática e memorização.' },
+        { level: 4, title: 'Mestre & Discipulador', description: 'Maturidade para estudar, interpretar e compartilhar a Palavra com outros.' },
+        { level: 5, title: 'Expert & Exegeta', description: 'Visão ampla das Escrituras e discernimento para estudos mais profundos.' },
+      ],
+      english: [
+        { level: 'A1/A2', title: 'Inglês essencial', description: 'Vocabulário fundamental e frases simples para começar a ler a Bíblia em inglês.' },
+        { level: 'B1', title: 'Inglês intermediário', description: 'Compreensão de textos familiares e comunicação em situações do dia a dia.' },
+        { level: 'B2', title: 'Inglês independente', description: 'Boa compreensão de textos teológicos intermediários e maior autonomia.' },
+        { level: 'C1', title: 'Inglês avançado', description: 'Leitura fluente, análise de contexto e comunicação precisa em temas complexos.' },
+        { level: 'C2', title: 'Inglês proficiente', description: 'Domínio avançado para interpretar e ensinar conteúdos bíblicos em inglês.' },
+      ],
     };
 
     function toast(msg) {
@@ -170,6 +233,39 @@
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Object({ status: res.status, data });
       return data;
+    }
+
+    function readPlacementLevels(userId) {
+      try {
+        return JSON.parse(localStorage.getItem('fs_placement_' + userId) || '{}') || {};
+      } catch (_) {
+        return {};
+      }
+    }
+
+    function savePlacementLevel(axis, result) {
+      ctx.placementLevels[axis] = result;
+      try {
+        localStorage.setItem('fs_placement_' + ctx.userId, JSON.stringify(ctx.placementLevels));
+      } catch (_) {
+        // A jornada continua funcionando mesmo quando o armazenamento local está indisponível.
+      }
+    }
+
+    function axisDefinition(axis) {
+      const fallback = {
+        bible: { name: 'Bíblia', description: 'Leitura e estudo da Palavra, dos 66 livros às trilhas temáticas.' },
+        english: { name: 'Inglês', description: 'Aprendizado bilíngue de inglês usando a Bíblia como base.' },
+      };
+      return ((ctx.tracks && ctx.tracks.axes) || []).find(a => a.id === axis) || fallback[axis];
+    }
+
+    function placementLevelFor(axis, d) {
+      const saved = ctx.placementLevels[axis];
+      if (saved && saved.level) return saved;
+      const level = axis === 'bible' ? d.discipleship.level : d.discipleship.englishLevel;
+      const definition = (PLACEMENT_LEVELS[axis] || []).find(item => item.level === level);
+      return { level, title: definition ? definition.title : 'Ainda não avaliado' };
     }
 
     // Onboarding: garante Discípulo + desafio; guarda o id no localStorage.
@@ -187,6 +283,7 @@
       }
       if (!userId) { userId = seed.user.id; localStorage.setItem('fs_userId', userId); }
       ctx.userId = userId;
+      ctx.placementLevels = readPlacementLevels(userId);
       await refresh();
     }
 
@@ -222,13 +319,19 @@
       const pct = d.progress ? d.progress.percentComplete : 0;
       const chaptersRead = d.progress ? d.progress.chaptersRead : 0;
       const total = d.totalBibleChapters;
+      const bibleLevel = placementLevelFor('bible', d);
+      const englishLevel = placementLevelFor('english', d);
 
       const disciple =
         '<div class="disciple">' +
           '<img class="mascot" src="/icons/fish.svg" alt="Mascote peixe" />' +
           '<div class="info">' +
-            '<div class="era">Discípulo · ' + d.discipleship.name + '</div>' +
-            '<div class="sub">Nível ' + d.discipleship.level + ' · Inglês ' + d.discipleship.englishLevel + ' · Nível XP ' + d.user.level + '</div>' +
+            '<div class="era">Discípulo · ' + escapeHtml(d.discipleship.name) + '</div>' +
+            '<div class="sub">Nível XP ' + escapeHtml(d.user.level) + ' · ' + chaptersRead + ' capítulos caminhados</div>' +
+            '<div class="axis-levels" aria-label="Níveis por eixo">' +
+              '<div class="axis-level"><span>📖 Bíblia</span><strong>Nível ' + escapeHtml(bibleLevel.level) + '</strong><small>' + escapeHtml(bibleLevel.title) + '</small></div>' +
+              '<div class="axis-level"><span>🔤 Inglês</span><strong>' + escapeHtml(englishLevel.level) + '</strong><small>' + escapeHtml(englishLevel.title) + '</small></div>' +
+            '</div>' +
             '<div class="bar"><i style="width:' + pct + '%"></i></div>' +
             '<div class="bar-label"><span>' + chaptersRead + ' de ' + total + ' capítulos</span><span>' + pct + '% da Palavra</span></div>' +
           '</div>' +
@@ -244,19 +347,26 @@
         ? '<div class="badges">' + d.badges.map(b => '<div class="badge">🏅 ' + b.label + '</div>').join('') + '</div>'
         : '<div class="empty">Nenhuma insígnia ainda. Leia um capítulo para começar!</div>';
 
+      const axis = axisDefinition(ctx.axis);
+      const axisHeader =
+        '<div class="axis-panel-head">' +
+          '<div class="axis-panel-copy"><h2>' + (ctx.axis === 'bible' ? '📚 ' : '🔤 ') + escapeHtml(axis.name) + '</h2><p>' + escapeHtml(axis.description) + '</p></div>' +
+          '<button class="placement-button" type="button" onclick="openPlacement(\'' + ctx.axis + '\')">Fazer teste de nivelamento</button>' +
+        '</div>';
+
       let body;
       if (ctx.axis === 'english') {
-        body = '<div class="english-box">🔤 Eixo de Inglês<br><br>Em breve: lições bilíngues geradas pela IA a partir dos capítulos que você lê. Por enquanto, cada capítulo já traz um resumo em inglês no Tutor de IA.</div>';
+        body = axisHeader + '<div class="english-box">Lições bilíngues a partir dos capítulos que você lê. Faça o teste de nivelamento para registrar seu ponto de partida e receber um nível de inglês para a jornada.</div>';
       } else {
-        body =
-          '<div class="section-title">📚 Trilha Principal</div>' +
+        body = axisHeader +
+          '<div class="section-title">Trilha Principal</div>' +
           '<div class="picker-label">Seção</div>' +
           '<div class="picker">' + ctx.tracks.bible.sections.map(s =>
-            '<span class="pill ' + (s.id === ctx.section ? 'active' : '') + '" onclick="selectSection(\'' + s.id + '\')">' + s.name + '</span>'
+            '<span class="pill ' + (s.id === ctx.section ? 'active' : '') + '" onclick="selectSection(\'' + s.id + '\')">' + escapeHtml(s.name) + '</span>'
           ).join('') + '</div>' +
           '<div class="picker-label">Livro</div>' +
           '<div class="picker">' + currentSection().books.map(b =>
-            '<span class="pill ' + (b.usfm === ctx.book ? 'active' : '') + '" onclick="selectBook(\'' + b.usfm + '\')">' + b.name + '</span>'
+            '<span class="pill book-pill ' + (b.usfm === ctx.book ? 'active' : '') + '" onclick="selectBook(\'' + b.usfm + '\')"><span>' + escapeHtml(b.name) + '</span><small>' + b.chapters + ' cap.</small></span>'
           ).join('') + '</div>' +
           '<div class="path" id="path"></div>' +
           renderThematic();
@@ -300,6 +410,91 @@
     }
 
     function selectAxis(axis) { ctx.axis = axis; renderApp(ctx.dashboard); }
+    function placementResultFor(axis, score) {
+      const index = Math.max(0, Math.min((PLACEMENT_LEVELS[axis] || []).length - 1, score));
+      const definition = PLACEMENT_LEVELS[axis][index];
+      return { level: definition.level, title: definition.title, description: definition.description, score };
+    }
+
+    function renderPlacementQuestion() {
+      const placement = ctx.placement;
+      const questions = PLACEMENT_QUESTIONS[placement.axis];
+      const question = questions[placement.index];
+      const axis = axisDefinition(placement.axis);
+      document.getElementById('q-title').textContent = 'Teste de nivelamento · ' + axis.name;
+      document.getElementById('q-ref').textContent = 'Descubra seu ponto de partida';
+      document.getElementById('q-body').innerHTML =
+        '<div class="placement-progress">Pergunta ' + (placement.index + 1) + ' de ' + questions.length + '</div>' +
+        '<div class="placement-question">' + escapeHtml(question.question) + '</div>' +
+        question.options.map((option, index) =>
+          '<button class="placement-option ' + (placement.selected === index ? 'sel' : '') + '" type="button" data-placement-idx="' + index + '" onclick="selectPlacementOption(' + index + ')">' + escapeHtml(option) + '</button>'
+        ).join('');
+      document.getElementById('q-confirm').textContent = placement.index === questions.length - 1 ? 'Ver meu nível' : 'Próxima pergunta';
+      document.getElementById('q-confirm').disabled = placement.selected === null;
+      document.getElementById('q-skip').textContent = 'Cancelar teste';
+    }
+
+    function openPlacement(axis) {
+      ctx.placement = { axis, index: 0, score: 0, selected: null, result: null };
+      document.getElementById('overlay').classList.add('open');
+      renderPlacementQuestion();
+    }
+
+    function selectPlacementOption(index) {
+      if (!ctx.placement || ctx.placement.result) return;
+      ctx.placement.selected = index;
+      document.querySelectorAll('.placement-option').forEach(el => el.classList.toggle('sel', Number(el.dataset.placementIdx) === index));
+      document.getElementById('q-confirm').disabled = false;
+    }
+
+    function advancePlacement() {
+      const placement = ctx.placement;
+      if (!placement || placement.selected === null) return;
+      const questions = PLACEMENT_QUESTIONS[placement.axis];
+      if (placement.selected === questions[placement.index].correctIndex) placement.score += 1;
+
+      if (placement.index < questions.length - 1) {
+        placement.index += 1;
+        placement.selected = null;
+        renderPlacementQuestion();
+        return;
+      }
+
+      placement.result = placementResultFor(placement.axis, placement.score);
+      savePlacementLevel(placement.axis, placement.result);
+      const axis = axisDefinition(placement.axis);
+      document.getElementById('q-title').textContent = 'Nivelamento concluído';
+      document.getElementById('q-ref').textContent = axis.name;
+      document.getElementById('q-body').innerHTML =
+        '<div class="placement-result"><div class="muted">Seu nível de partida</div>' +
+        '<div class="level-mark">' + escapeHtml(placement.result.level) + '</div>' +
+        '<h3>' + escapeHtml(placement.result.title) + '</h3>' +
+        '<p>' + escapeHtml(placement.result.description) + '</p>' +
+        '<p class="muted">Você acertou ' + placement.result.score + ' de ' + questions.length + ' perguntas.</p></div>';
+      document.getElementById('q-confirm').textContent = 'Fechar';
+      document.getElementById('q-confirm').disabled = false;
+      document.getElementById('q-skip').textContent = 'Refazer teste';
+      renderApp(ctx.dashboard);
+    }
+
+    function confirmModal() {
+      if (ctx.placement) {
+        if (ctx.placement.result) closeModal();
+        else advancePlacement();
+        return;
+      }
+      completeChapter(true);
+    }
+
+    function skipModal() {
+      if (ctx.placement) {
+        if (ctx.placement.result) openPlacement(ctx.placement.axis);
+        else closeModal();
+        return;
+      }
+      completeChapter(false);
+    }
+
     function selectSection(id) {
       ctx.section = id;
       ctx.book = currentSection().books[0].usfm;
@@ -317,8 +512,10 @@
       const ref = usfm + '.' + chapter;
       ctx.current = { usfm, chapter, ref, selected: null, quiz: null };
 
+      ctx.placement = null;
       document.getElementById('q-title').textContent = 'Lição: ' + ref.replace('.', ' ');
       document.getElementById('q-ref').textContent = 'Leitura + Tutor de IA';
+      document.getElementById('q-skip').textContent = 'Ler sem quiz';
       document.getElementById('q-body').innerHTML = '<p class="q">Carregando a Palavra e o Tutor...</p>';
       document.getElementById('q-confirm').disabled = true;
       document.getElementById('overlay').classList.add('open');
@@ -366,7 +563,10 @@
       document.getElementById('q-confirm').disabled = false;
     }
 
-    function closeModal() { document.getElementById('overlay').classList.remove('open'); }
+    function closeModal() {
+      document.getElementById('overlay').classList.remove('open');
+      ctx.placement = null;
+    }
 
     async function completeChapter(withQuiz) {
       const { usfm, chapter, selected, quiz } = ctx.current;
@@ -394,8 +594,8 @@
       }
     }
 
-    document.getElementById('q-confirm').onclick = () => completeChapter(true);
-    document.getElementById('q-skip').onclick = () => completeChapter(false);
+    document.getElementById('q-confirm').onclick = confirmModal;
+    document.getElementById('q-skip').onclick = skipModal;
     document.getElementById('overlay').onclick = (e) => { if (e.target.id === 'overlay') closeModal(); };
 
     bootstrap().catch(err => {
