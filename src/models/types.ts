@@ -54,6 +54,11 @@ export interface UserProgress {
   status: ProgressStatus;
   startedAt: Date;
   completedAt: Date | null;
+  /** Último livro aberto pelo usuário durante este desafio. */
+  lastBookUsfm: string | null;
+  /** Último capítulo aberto pelo usuário durante este desafio. */
+  lastChapter: number | null;
+  lastOpenedAt: Date | null;
   updatedAt: Date;
 }
 

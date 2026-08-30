@@ -17,6 +17,9 @@ interface ProgressRow {
   status: ProgressStatus;
   started_at: Date;
   completed_at: Date | null;
+  last_book_usfm: string | null;
+  last_chapter: number | null;
+  last_opened_at: Date | null;
   updated_at: Date;
 }
 
@@ -29,8 +32,11 @@ function toEntity(row: ProgressRow): UserProgress {
     xpEarned: row.xp_earned,
     status: row.status,
     startedAt: row.started_at,
-    completedAt: row.completed_at,
-    updatedAt: row.updated_at,
+      completedAt: row.completed_at,
+      lastBookUsfm: row.last_book_usfm ?? null,
+      lastChapter: row.last_chapter ?? null,
+      lastOpenedAt: row.last_opened_at ?? null,
+      updatedAt: row.updated_at,
   };
 }
 
@@ -131,6 +137,29 @@ export const progressRepository = {
       [userId, challengeId],
     );
     return res.rows[0] ? toEntity(res.rows[0]) : null;
+  },
+
+  /** Registra a última posição aberta para permitir retomar a jornada. */
+  async saveLastPosition(
+    userId: string,
+    challengeId: string,
+    bookUsfm: string,
+    chapter: number,
+  ): Promise<UserProgress> {
+    await pool.query(
+      `INSERT INTO user_progress
+         (user_id, challenge_id, last_book_usfm, last_chapter, last_opened_at)
+       VALUES ($1, $2, $3, $4, now())
+       ON CONFLICT (user_id, challenge_id) DO UPDATE SET
+         last_book_usfm = EXCLUDED.last_book_usfm,
+         last_chapter = EXCLUDED.last_chapter,
+         last_opened_at = now(),
+         updated_at = now()`,
+      [userId, challengeId, bookUsfm, chapter],
+    );
+    const progress = await this.find(userId, challengeId);
+    if (!progress) throw new Error('Falha ao salvar a posição de leitura.');
+    return progress;
   },
 
   /** Conta capitulos distintos concluidos de um livro (para detectar livro completo). */

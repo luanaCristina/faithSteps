@@ -74,6 +74,14 @@ A implementação está em `src/integrations/youversion/`. O contrato `YouVersio
 
 > **Segurança:** a chave da YouVersion vem **apenas** de `YOUVERSION_API_KEY` no `.env` (nunca commitada). Se uma chave for exposta, rotacione-a imediatamente no portal da plataforma.
 
+## Conta, login e retomada da jornada
+
+A aplicação oferece cadastro e login por e-mail e senha. As senhas são armazenadas somente como hashes `scrypt`, e a sessão usa um cookie `HttpOnly`, com `Secure` em produção e validade de 30 dias. O endpoint `GET /api/auth/me` recupera a conta atual; `POST /api/auth/register`, `POST /api/auth/login` e `POST /api/auth/logout` controlam o ciclo da sessão.
+
+O progresso de capítulos, XP, Talentos, ofensiva e insígnias continua sendo persistido nas tabelas existentes. A nova posição de leitura é gravada por conta e desafio através de `POST /api/progress/position`, com `challengeId`, `bookUsfm` e `chapter`. Ao entrar novamente, o dashboard retorna `lastBookUsfm`, `lastChapter` e `lastOpenedAt`, permitindo que a interface retome automaticamente o livro e o capítulo onde a pessoa parou.
+
+A página **Sobre** explica a proposta, os dois eixos de aprendizagem, o funcionamento do progresso e a retomada da jornada. Ela permanece acessível mesmo para visitantes que ainda não fizeram login.
+
 ## Como rodar
 
 ```bash

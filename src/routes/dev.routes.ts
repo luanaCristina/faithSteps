@@ -4,10 +4,10 @@
  */
 import { Router } from 'express';
 import { z } from 'zod';
-import { ChallengeType, Language, TOTAL_BIBLE_CHAPTERS } from '@/models';
+import { Language } from '@/models';
 import { validate } from '@/middleware/validate';
 import { userRepository } from '@/repositories/user.repository';
-import { challengeRepository } from '@/repositories/challenge.repository';
+import { ensureWholeBibleChallenge } from '@/modules/onboarding';
 
 export const devRoutes = Router();
 
@@ -23,20 +23,7 @@ devRoutes.post('/seed', validate(seedSchema), async (req, res, next) => {
     const body = req.body as { displayName?: string; email?: string; language?: Language };
 
     // 1) Desafio Biblia Toda (cria se ainda nao existe).
-    let [challenge] = await challengeRepository.listActive(ChallengeType.WHOLE_BIBLE);
-    if (!challenge) {
-      challenge = await challengeRepository.create({
-        slug: 'biblia-toda',
-        title: 'Desafio da Biblia Toda',
-        description: 'Leia os 66 livros (1.189 capitulos) no seu ritmo amoroso.',
-        challengeType: ChallengeType.WHOLE_BIBLE,
-        totalChapters: TOTAL_BIBLE_CHAPTERS,
-        youversionPlanId: null,
-        collectiveGoalChapters: null,
-        startsAt: null,
-        endsAt: null,
-      });
-    }
+    const challenge = await ensureWholeBibleChallenge();
 
     // 2) Usuario demo (idempotente por email).
     const email = body.email ?? 'peregrino@faithsteps.dev';

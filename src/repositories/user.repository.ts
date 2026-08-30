@@ -21,6 +21,7 @@ interface UserRow {
   last_read_date: Date | null;
   created_at: Date;
   updated_at: Date;
+  password_hash: string | null;
 }
 
 function toEntity(row: UserRow): User {
@@ -53,6 +54,30 @@ export const userRepository = {
   async findById(id: string): Promise<User | null> {
     const res = await pool.query<UserRow>('SELECT * FROM users WHERE id = $1', [id]);
     return res.rows[0] ? toEntity(res.rows[0]) : null;
+  },
+
+  async findByEmailForAuth(email: string): Promise<{ user: User; passwordHash: string | null } | null> {
+    const res = await pool.query<UserRow>(
+      'SELECT * FROM users WHERE lower(email) = lower($1) LIMIT 1',
+      [email],
+    );
+    if (!res.rows[0]) return null;
+    return { user: toEntity(res.rows[0]), passwordHash: res.rows[0].password_hash ?? null };
+  },
+
+  async createAccount(input: {
+    email: string;
+    displayName: string;
+    preferredLanguage: Language;
+    passwordHash: string;
+  }): Promise<User> {
+    const res = await pool.query<UserRow>(
+      `INSERT INTO users (email, display_name, preferred_language, password_hash)
+       VALUES (lower($1), $2, $3, $4)
+       RETURNING *`,
+      [input.email, input.displayName, input.preferredLanguage, input.passwordHash],
+    );
+    return toEntity(res.rows[0]);
   },
 
   /** Aplica ganho de XP e recalcula o nivel. Retorna o novo total. */

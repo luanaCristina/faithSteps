@@ -5,6 +5,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { AppError, ERROR_CODES, TOTAL_BIBLE_CHAPTERS } from '@/models';
 import { validate } from '@/middleware/validate';
+import { resolveUserId } from '@/middleware/auth';
 import { userRepository } from '@/repositories/user.repository';
 import { talentsRepository } from '@/repositories/talents.repository';
 import { progressRepository } from '@/repositories/progress.repository';
@@ -23,7 +24,7 @@ const idParams = z.object({ id: z.string().uuid() });
 // GET /api/users/:id/dashboard
 userRoutes.get('/:id/dashboard', validate(idParams, 'params'), async (req, res, next) => {
   try {
-    const userId = req.params.id;
+    const userId = await resolveUserId(req, req.params.id);
     const user = await userRepository.findById(userId);
     if (!user) {
       throw new AppError(ERROR_CODES.USER_NOT_FOUND, 'Usuario nao encontrado.', 404);
@@ -62,6 +63,9 @@ userRoutes.get('/:id/dashboard', validate(idParams, 'params'), async (req, res, 
         totalChapters: challenge.totalChapters,
         percentComplete: percentComplete(chaptersRead, challenge.totalChapters),
         startedAt,
+        lastBookUsfm: progress?.lastBookUsfm ?? null,
+        lastChapter: progress?.lastChapter ?? null,
+        lastOpenedAt: progress?.lastOpenedAt ?? null,
         estimatedCompletionDate: estimateCompletionDate({
           chaptersRead,
           totalChapters: challenge.totalChapters,

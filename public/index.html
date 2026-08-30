@@ -35,8 +35,45 @@
     .stat.streak { color: #c9d2ec; }
     .stat.talents { color: var(--green); }
     .stat.bibles { color: var(--blue); }
+    .top-actions { display: flex; align-items: center; gap: 8px; }
+    .top-link { border: 1px solid var(--border); background: transparent; color: var(--muted); border-radius: 10px; padding: 7px 10px; font-size: .78rem; font-weight: 750; cursor: pointer; transition: color .16s, border-color .16s, background .16s, transform .16s; }
+    .top-link:hover { color: #fff; border-color: var(--purple); background: rgba(125,92,255,.14); }
+    .top-link:active { transform: scale(.97); }
+    .top-link.account { color: #fff; border-color: var(--purple); }
 
     main { max-width: 720px; margin: 0 auto; padding: 18px; }
+    .auth-shell, .about-shell { background: linear-gradient(145deg, #19172e, #211b3b); border: 1px solid var(--border); border-radius: 18px; padding: 24px; box-shadow: 0 18px 42px rgba(0,0,0,.24); }
+    .auth-shell { max-width: 470px; margin: 34px auto 0; }
+    .about-shell { margin: 12px auto 0; }
+    .auth-kicker, .about-kicker { color: var(--purple2); font-size: .78rem; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+    .auth-shell h1, .about-shell h1 { font-size: 1.55rem; margin: 8px 0; }
+    .auth-shell > p, .about-shell .lead { color: var(--muted); line-height: 1.55; font-size: .92rem; }
+    .auth-form { display: grid; gap: 12px; margin-top: 20px; }
+    .field { display: grid; gap: 6px; }
+    .field label { color: #d9dded; font-size: .78rem; font-weight: 750; }
+    .field input, .field select { width: 100%; background: var(--panel2); border: 1px solid var(--border); color: var(--text); border-radius: 10px; padding: 11px 12px; font: inherit; font-size: .9rem; outline: none; }
+    .field input:focus, .field select:focus { border-color: var(--purple); box-shadow: 0 0 0 3px rgba(125,92,255,.18); }
+    .auth-submit { margin-top: 4px; }
+    .auth-switch { margin-top: 16px; text-align: center; color: var(--muted); font-size: .82rem; }
+    .text-button { border: 0; background: transparent; color: var(--purple2); font: inherit; font-weight: 800; cursor: pointer; padding: 0; }
+    .form-error { display: none; background: rgba(255,92,92,.1); border: 1px solid rgba(255,92,92,.4); color: #ffb7b7; border-radius: 10px; padding: 10px 12px; font-size: .82rem; line-height: 1.4; }
+    .form-error.show { display: block; }
+    .about-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 20px 0; }
+    .about-card { background: rgba(15,18,32,.34); border: 1px solid rgba(255,255,255,.1); border-radius: 13px; padding: 15px; }
+    .about-card h2 { font-size: .94rem; margin-bottom: 7px; }
+    .about-card p, .about-shell li { color: var(--muted); line-height: 1.55; font-size: .84rem; }
+    .about-shell ul { padding-left: 18px; display: grid; gap: 7px; }
+    .about-cta { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
+    .about-cta .btn { width: auto; padding: 11px 16px; }
+    .resume-note { display: inline-flex; align-items: center; gap: 6px; color: var(--green); font-size: .76rem; margin-top: 7px; }
+    @media (max-width: 520px) {
+      .topbar { padding: 10px 12px; gap: 8px; }
+      .brand { margin-right: 0; }
+      .top-actions { width: 100%; order: 3; }
+      .top-link { flex: 1; }
+      .about-grid { grid-template-columns: 1fr; }
+      .auth-shell, .about-shell { padding: 19px; }
+    }
 
     /* Cartao do Discipulo + mascote peixe */
     .disciple {
@@ -162,6 +199,10 @@
     <div class="stat xp" title="Experiência"><img src="/icons/lamp.svg" alt="XP" /><span id="t-xp">0</span></div>
     <div class="stat talents" title="Talentos">🪙<span id="t-talents">0</span></div>
     <div class="stat bibles" title="Bíblias doadas">📖<span id="t-bibles">0</span></div>
+    <div id="account-actions" class="top-actions">
+      <button class="top-link" type="button" onclick="showAbout()">Sobre</button>
+      <button class="top-link account" type="button" onclick="showAuth('login')">Entrar</button>
+    </div>
   </div>
 
   <main>
@@ -185,7 +226,7 @@
     let ctx = {
       userId: null, challengeId: null, dashboard: null, tracks: null,
       axis: 'bible', section: null, book: null, current: null,
-      placementLevels: {}, placement: null,
+      placementLevels: {}, placement: null, view: 'auth', authMode: 'login', authUser: null,
     };
 
     const PLACEMENT_QUESTIONS = {
@@ -229,7 +270,7 @@
     }
 
     async function api(path, opts) {
-      const res = await fetch(API + path, opts);
+      const res = await fetch(API + path, { credentials: 'include', ...(opts || {}) });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Object({ status: res.status, data });
       return data;
@@ -268,37 +309,62 @@
       return { level, title: definition ? definition.title : 'Ainda não avaliado' };
     }
 
-    // Onboarding: garante Discípulo + desafio; guarda o id no localStorage.
-    async function bootstrap() {
-      let userId = localStorage.getItem('fs_userId');
-      const [seed, tracks] = await Promise.all([
-        api('/api/dev/seed', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) }),
-        api('/api/tracks').catch(() => null),
-      ]);
-      ctx.challengeId = seed.challenge.id;
-      ctx.tracks = tracks;
-      if (tracks && tracks.bible.sections.length) {
-        ctx.section = tracks.bible.sections[0].id;
-        ctx.book = tracks.bible.sections[0].books[0].usfm;
+    function setBookContext(usfm) {
+      if (!ctx.tracks || !ctx.tracks.bible) return;
+      const section = ctx.tracks.bible.sections.find(s => s.books.some(book => book.usfm === usfm));
+      if (section) {
+        ctx.section = section.id;
+        ctx.book = usfm;
       }
-      if (!userId) { userId = seed.user.id; localStorage.setItem('fs_userId', userId); }
-      ctx.userId = userId;
-      ctx.placementLevels = readPlacementLevels(userId);
-      await refresh();
+    }
+
+    function restoreLastPosition(d) {
+      if (d.progress && d.progress.lastBookUsfm) setBookContext(d.progress.lastBookUsfm);
+    }
+
+    // A jornada só é carregada depois que a sessão do usuário é confirmada.
+    async function bootstrap() {
+      try {
+        const session = await api('/api/auth/me');
+        ctx.authUser = session.user;
+        ctx.userId = session.user.id;
+        ctx.challengeId = session.challenge.id;
+        ctx.tracks = await api('/api/tracks');
+        if (ctx.tracks && ctx.tracks.bible.sections.length) {
+          ctx.section = ctx.tracks.bible.sections[0].id;
+          ctx.book = ctx.tracks.bible.sections[0].books[0].usfm;
+        }
+        ctx.placementLevels = readPlacementLevels(ctx.userId);
+        ctx.view = 'dashboard';
+        await refresh();
+      } catch (err) {
+        if (err && err.status === 401) {
+          renderTop(null);
+          showAuth('login');
+        } else {
+          document.getElementById('app').innerHTML = '<div class="loading">Não foi possível carregar a sua conta. Tente novamente.</div>';
+        }
+      }
     }
 
     async function refresh() {
       const d = await api('/api/users/' + ctx.userId + '/dashboard');
       ctx.dashboard = d;
+      restoreLastPosition(d);
       renderTop(d);
       renderApp(d);
     }
 
     function renderTop(d) {
-      document.getElementById('t-streak').textContent = d.user.currentStreak;
-      document.getElementById('t-xp').textContent = d.user.totalXp;
-      document.getElementById('t-talents').textContent = d.talents.balance;
-      document.getElementById('t-bibles').textContent = d.talents.biblesDonated;
+      document.getElementById('t-streak').textContent = d ? d.user.currentStreak : '0';
+      document.getElementById('t-xp').textContent = d ? d.user.totalXp : '0';
+      document.getElementById('t-talents').textContent = d ? d.talents.balance : '0';
+      document.getElementById('t-bibles').textContent = d ? d.talents.biblesDonated : '0';
+      const actions = document.getElementById('account-actions');
+      actions.innerHTML = '<button class="top-link" type="button" onclick="showAbout()">Sobre</button>' +
+        (ctx.userId
+          ? '<button class="top-link account" type="button" onclick="logout()">Sair</button>'
+          : '<button class="top-link account" type="button" onclick="showAuth(\'login\')">Entrar</button>');
     }
 
     function readCountFor(d, usfm) {
@@ -314,11 +380,153 @@
       return sec.books.find(b => b.usfm === ctx.book) || sec.books[0];
     }
 
+    async function saveLastPosition(usfm, chapter) {
+      if (!ctx.userId || !ctx.challengeId) return;
+      await api('/api/progress/position', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ challengeId: ctx.challengeId, bookUsfm: usfm, chapter }),
+      }).catch(() => null);
+    }
+
+    function showAuth(mode) {
+      ctx.view = 'auth';
+      ctx.authMode = mode === 'register' ? 'register' : 'login';
+      renderAuth();
+    }
+
+    function renderAuth() {
+      const isRegister = ctx.authMode === 'register';
+      const app = document.getElementById('app');
+      app.innerHTML =
+        '<section class="auth-shell" aria-labelledby="auth-title">' +
+          '<div class="auth-kicker">FaithSteps</div>' +
+          '<h1 id="auth-title">' + (isRegister ? 'Comece sua jornada' : 'Bem-vindo de volta') + '</h1>' +
+          '<p>' + (isRegister ? 'Crie sua conta para guardar sua evolução, seus capítulos concluídos e o ponto exato onde parou.' : 'Entre para continuar sua jornada de discipulado do ponto em que parou.') + '</p>' +
+          '<form class="auth-form" id="auth-form" onsubmit="submitAuth(event)">' +
+            (isRegister ? '<div class="field"><label for="auth-name">Como devemos chamar você?</label><input id="auth-name" name="displayName" type="text" minlength="2" maxlength="120" autocomplete="name" required placeholder="Seu nome" /></div>' : '') +
+            '<div class="field"><label for="auth-email">E-mail</label><input id="auth-email" name="email" type="email" maxlength="255" autocomplete="email" required placeholder="voce@exemplo.com" /></div>' +
+            '<div class="field"><label for="auth-password">Senha</label><input id="auth-password" name="password" type="password" minlength="' + (isRegister ? '8' : '1') + '" maxlength="128" autocomplete="' + (isRegister ? 'new-password' : 'current-password') + '" required placeholder="' + (isRegister ? 'Pelo menos 8 caracteres' : 'Sua senha') + '" /></div>' +
+            (isRegister ? '<div class="field"><label for="auth-language">Idioma preferido</label><select id="auth-language" name="preferredLanguage"><option value="pt">Português</option><option value="en">English</option></select></div>' : '') +
+            '<div class="form-error" id="auth-error" role="alert"></div>' +
+            '<button class="btn auth-submit" id="auth-submit" type="submit">' + (isRegister ? 'Criar minha conta' : 'Entrar na jornada') + '</button>' +
+          '</form>' +
+          '<div class="auth-switch">' + (isRegister ? 'Já possui uma conta? ' : 'Ainda não possui uma conta? ') + '<button class="text-button" type="button" onclick="showAuth(\'' + (isRegister ? 'login' : 'register') + '\')">' + (isRegister ? 'Entrar' : 'Criar cadastro') + '</button></div>' +
+        '</section>';
+    }
+
+    function authErrorMessage(err) {
+      if (err && err.data && err.data.error && err.data.error.message) return err.data.error.message;
+      return 'Não foi possível concluir. Verifique os dados e tente novamente.';
+    }
+
+    async function submitAuth(event) {
+      event.preventDefault();
+      const form = event.target;
+      const isRegister = ctx.authMode === 'register';
+      const payload = {
+        email: form.email.value.trim(),
+        password: form.password.value,
+      };
+      if (isRegister) {
+        payload.displayName = form.displayName.value.trim();
+        payload.preferredLanguage = form.preferredLanguage.value;
+      }
+      const submit = document.getElementById('auth-submit');
+      const error = document.getElementById('auth-error');
+      submit.disabled = true;
+      submit.textContent = isRegister ? 'Criando conta...' : 'Entrando...';
+      error.classList.remove('show');
+      try {
+        const session = await api('/api/auth/' + (isRegister ? 'register' : 'login'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        ctx.authUser = session.user;
+        ctx.userId = session.user.id;
+        ctx.challengeId = session.challenge.id;
+        ctx.tracks = await api('/api/tracks');
+        if (ctx.tracks && ctx.tracks.bible.sections.length) {
+          ctx.section = ctx.tracks.bible.sections[0].id;
+          ctx.book = ctx.tracks.bible.sections[0].books[0].usfm;
+        }
+        ctx.placementLevels = readPlacementLevels(ctx.userId);
+        ctx.view = 'dashboard';
+        await refresh();
+        toast(isRegister ? 'Conta criada. Sua jornada começa agora.' : 'Login realizado. Bom reencontro com a Palavra.');
+      } catch (err) {
+        error.textContent = authErrorMessage(err);
+        error.classList.add('show');
+        submit.disabled = false;
+        submit.textContent = isRegister ? 'Criar minha conta' : 'Entrar na jornada';
+      }
+    }
+
+    function renderAbout() {
+      const app = document.getElementById('app');
+      app.innerHTML =
+        '<section class="about-shell" aria-labelledby="about-title">' +
+          '<div class="about-kicker">Sobre o FaithSteps</div>' +
+          '<h1 id="about-title">Uma jornada de discipulado que transforma constância em impacto.</h1>' +
+          '<p class="lead">O FaithSteps foi criado para ajudar pessoas a lerem a Bíblia inteira, aprenderem inglês com as Escrituras e crescerem no caráter de Cristo. A experiência combina leitura, reflexão, acompanhamento e gamificação redentiva — sem culpa e sem penalidades.</p>' +
+          '<div class="about-grid">' +
+            '<article class="about-card"><h2>Leia no seu ritmo</h2><p>Escolha um dos 66 livros, avance capítulo a capítulo e registre suas conclusões. O progresso fica associado à sua conta.</p></article>' +
+            '<article class="about-card"><h2>Aprenda em dois eixos</h2><p>O eixo Bíblia acompanha sua leitura e estudo. O eixo Inglês usa a Bíblia como base para desenvolver vocabulário e compreensão.</p></article>' +
+            '<article class="about-card"><h2>Entenda sua evolução</h2><p>XP, ofensiva, níveis de discipulado, insígnias e Talentos tornam visível o caminho já percorrido e celebram a constância.</p></article>' +
+            '<article class="about-card"><h2>Retome de onde parou</h2><p>Cada capítulo aberto é salvo na sua conta. Ao entrar novamente, a aplicação retorna ao livro e ao capítulo registrados na última sessão.</p></article>' +
+          '</div>' +
+          '<h2>Como funciona</h2>' +
+          '<ul><li>Crie seu cadastro ou entre com seu e-mail e senha.</li><li>Escolha uma seção e um livro da Bíblia para começar.</li><li>Abra um capítulo, leia o conteúdo e conclua a lição quando terminar.</li><li>Use o teste de nivelamento de cada eixo para registrar seu ponto de partida.</li><li>Acompanhe XP, Talentos, insígnias e o progresso da Bíblia toda no cartão do Discípulo.</li></ul>' +
+          '<div class="about-cta">' +
+            (ctx.userId ? '<button class="btn" type="button" onclick="showDashboard()">Voltar à minha jornada</button>' : '<button class="btn" type="button" onclick="showAuth(\'register\')">Criar minha conta</button><button class="btn secondary" type="button" onclick="showAuth(\'login\')">Já tenho cadastro</button>') +
+          '</div>' +
+        '</section>';
+    }
+
+    function showAbout() {
+      ctx.view = 'about';
+      renderAbout();
+    }
+
+    function showDashboard() {
+      if (!ctx.userId || !ctx.dashboard) {
+        showAuth('login');
+        return;
+      }
+      ctx.view = 'dashboard';
+      renderApp(ctx.dashboard);
+    }
+
+    async function logout() {
+      try {
+        await api('/api/auth/logout', { method: 'POST' });
+      } catch (_) {
+        // Mesmo que a rede falhe, a sessão local é removida da interface.
+      }
+      ctx.userId = null;
+      ctx.challengeId = null;
+      ctx.dashboard = null;
+      ctx.authUser = null;
+      ctx.tracks = null;
+      ctx.placementLevels = {};
+      ctx.view = 'auth';
+      renderTop(null);
+      showAuth('login');
+      toast('Sessão encerrada.');
+    }
+
     function renderApp(d) {
       const app = document.getElementById('app');
       const pct = d.progress ? d.progress.percentComplete : 0;
       const chaptersRead = d.progress ? d.progress.chaptersRead : 0;
       const total = d.totalBibleChapters;
+      const resumeBook = d.progress && d.progress.lastBookUsfm && ctx.tracks
+        ? ctx.tracks.bible.sections.flatMap(s => s.books).find(book => book.usfm === d.progress.lastBookUsfm)
+        : null;
+      const resumeNote = d.progress && d.progress.lastBookUsfm && d.progress.lastChapter
+        ? '<div class="resume-note">↩ Último ponto salvo: ' + escapeHtml(resumeBook ? resumeBook.name : d.progress.lastBookUsfm) + ' · capítulo ' + d.progress.lastChapter + '</div>'
+        : '';
       const bibleLevel = placementLevelFor('bible', d);
       const englishLevel = placementLevelFor('english', d);
 
@@ -334,6 +542,7 @@
             '</div>' +
             '<div class="bar"><i style="width:' + pct + '%"></i></div>' +
             '<div class="bar-label"><span>' + chaptersRead + ' de ' + total + ' capítulos</span><span>' + pct + '% da Palavra</span></div>' +
+            resumeNote +
           '</div>' +
         '</div>';
 
@@ -510,7 +719,9 @@
 
     async function openChapter(usfm, chapter) {
       const ref = usfm + '.' + chapter;
+      setBookContext(usfm);
       ctx.current = { usfm, chapter, ref, selected: null, quiz: null };
+      await saveLastPosition(usfm, chapter);
 
       ctx.placement = null;
       document.getElementById('q-title').textContent = 'Lição: ' + ref.replace('.', ' ');

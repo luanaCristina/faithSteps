@@ -11,6 +11,9 @@ import {
 } from '@/models';
 import { validate } from '@/middleware/validate';
 import { withTransaction } from '@/config/database';
+import { requireSessionUserId, resolveUserId } from '@/middleware/auth';
+import { progressRepository } from '@/repositories/progress.repository';
+import { challengeRepository } from '@/repositories/challenge.repository';
 import { progressSyncService } from '@/services/progress-sync.impl';
 import { userRepository } from '@/repositories/user.repository';
 import { talentsRepository } from '@/repositories/talents.repository';
@@ -28,12 +31,41 @@ const completeChapterSchema = z.object({
 });
 
 // POST /api/progress/complete-chapter
+const positionSchema = z.object({
+  challengeId: z.string().uuid(),
+  bookUsfm: z.string().min(1).max(10),
+  chapter: z.number().int().positive(),
+});
+
+// POST /api/progress/position — exige sessão e nunca aceita userId do cliente.
+progressRoutes.post('/position', validate(positionSchema), async (req, res, next) => {
+  try {
+    const userId = await requireSessionUserId(req);
+    const { challengeId, bookUsfm, chapter } = req.body as z.infer<typeof positionSchema>;
+    const challenge = await challengeRepository.findById(challengeId);
+    if (!challenge) {
+      throw new AppError(ERROR_CODES.CHALLENGE_NOT_FOUND, 'Desafio não encontrado.', 404);
+    }
+    const progress = await progressRepository.saveLastPosition(userId, challengeId, bookUsfm, chapter);
+    res.json({
+      challengeId,
+      bookUsfm: progress.lastBookUsfm,
+      chapter: progress.lastChapter,
+      openedAt: progress.lastOpenedAt,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 progressRoutes.post(
   '/complete-chapter',
   validate(completeChapterSchema),
   async (req, res, next) => {
     try {
-      const result = await progressSyncService.completeChapter(req.body);
+      const body = req.body as z.infer<typeof completeChapterSchema>;
+      const userId = await resolveUserId(req, body.userId);
+      const result = await progressSyncService.completeChapter({ ...body, userId });
       res.status(201).json(result);
     } catch (err) {
       next(err);
@@ -49,7 +81,8 @@ const donateSchema = z.object({
 // POST /api/progress/donate
 progressRoutes.post('/donate', validate(donateSchema), async (req, res, next) => {
   try {
-    const { userId, bibles } = req.body as { userId: string; bibles: number };
+    const { userId: requestedUserId, bibles } = req.body as { userId: string; bibles: number };
+    const userId = await resolveUserId(req, requestedUserId);
     const cost = bibles * TALENTS_PER_BIBLE_DONATION;
 
     const result = await withTransaction(async (db) => {

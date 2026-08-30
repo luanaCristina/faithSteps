@@ -13,6 +13,7 @@ import { progressRoutes } from './progress.routes';
 import { userRoutes } from './user.routes';
 import { devRoutes } from './dev.routes';
 import { aiRoutes } from './ai.routes';
+import { authRoutes } from './auth.routes';
 
 const langQuery = z.object({
   language: z.nativeEnum(Language).default(Language.PT),
@@ -57,6 +58,7 @@ router.get('/bible/passage', validate(passageQuery, 'query'), async (req, res, n
 });
 
 router.use('/challenges', challengeRoutes);
+router.use('/auth', authRoutes);
 router.use('/progress', progressRoutes);
 router.use('/users', userRoutes);
 router.use('/dev', devRoutes);
