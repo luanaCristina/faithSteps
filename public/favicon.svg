@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="FaithSteps">
+  <defs>
+    <radialGradient id="fl" cx="0.5" cy="0.3" r="0.8">
+      <stop offset="0" stop-color="#fff3b0"/>
+      <stop offset="0.6" stop-color="#ffc800"/>
+      <stop offset="1" stop-color="#ff9500"/>
+    </radialGradient>
+    <linearGradient id="cl" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e0a349"/>
+      <stop offset="1" stop-color="#b06f24"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#161a2e"/>
+  <circle cx="26" cy="20" r="12" fill="#ffc800" opacity="0.18"/>
+  <path d="M26 10 C 30 15, 31 19, 26 23 C 21 19, 22 15, 26 10 Z" fill="url(#fl)"/>
+  <path d="M10 42 C 10 35, 18 33, 30 33 C 44 33, 54 35, 54 40
+           C 54 46, 44 49, 32 49 C 22 49, 15 47, 10 42 Z" fill="url(#cl)" stroke="#8a531a" stroke-width="1.6"/>
+  <path d="M52 37 L 60 32 L 57 40 Z" fill="url(#cl)" stroke="#8a531a" stroke-width="1.4"/>
+  <line x1="57" y1="34" x2="60" y2="30" stroke="#3a2a12" stroke-width="2" stroke-linecap="round"/>
+  <path d="M20 49 L 44 49 L 39 54 L 25 54 Z" fill="#8a531a"/>
+</svg>

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="Tabuas da Lei (ofensiva)">
+  <defs>
+    <linearGradient id="stone" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9aa6c8"/>
+      <stop offset="1" stop-color="#6b768f"/>
+    </linearGradient>
+  </defs>
+  <!-- Duas tabuas com topo arredondado -->
+  <g stroke="#3a4055" stroke-width="1.6" stroke-linejoin="round">
+    <path d="M8 20 A9 9 0 0 1 23 20 L23 42 L8 42 Z" fill="url(#stone)"/>
+    <path d="M25 20 A9 9 0 0 1 40 20 L40 42 L25 42 Z" fill="url(#stone)"/>
+  </g>
+  <!-- Algarismos romanos I..V / VI..X sugeridos por tracos -->
+  <g stroke="#2f3446" stroke-width="1.4" stroke-linecap="round" opacity="0.85">
+    <line x1="12" y1="26" x2="12" y2="38"/>
+    <line x1="15.5" y1="26" x2="15.5" y2="38"/>
+    <line x1="19" y1="26" x2="19" y2="38"/>
+    <line x1="29" y1="26" x2="29" y2="38"/>
+    <line x1="32.5" y1="26" x2="32.5" y2="38"/>
+    <line x1="36" y1="26" x2="36" y2="38"/>
+  </g>
+</svg>

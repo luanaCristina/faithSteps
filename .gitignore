@@ -11,6 +11,12 @@ coverage/
 # OS
 .DS_Store
 
+# Binarios grandes / instaladores (nao versionar)
+*.dmg
+*.zip
+*.exe
+*.pkg
+
 # Editor
 .vscode/*
 !.vscode/extensions.json

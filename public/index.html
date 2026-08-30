@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>FaithSteps - Discipulado Gamificado</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <style>
     :root {
       --bg: #0f1220; --panel: #161a2e; --panel2: #1d2238; --border: #2a2f45;
@@ -21,26 +22,31 @@
     .topbar {
       position: sticky; top: 0; z-index: 10;
       display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
-      padding: 12px 18px; background: rgba(15,18,32,.95);
+      padding: 10px 18px; background: rgba(15,18,32,.95);
       backdrop-filter: blur(8px); border-bottom: 1px solid var(--border);
     }
-    .brand { font-weight: 800; font-size: 1.05rem; margin-right: auto; letter-spacing: .3px; }
+    .brand { display: flex; align-items: center; gap: 9px; font-weight: 800; font-size: 1.05rem; margin-right: auto; letter-spacing: .3px; }
+    .brand img { width: 30px; height: 30px; display: block; }
     .brand span { color: var(--purple2); }
     .stat { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: .92rem; }
-    .stat .ic { font-size: 1.1rem; }
+    .stat img { width: 22px; height: 22px; display: block; }
+    .stat .ic { font-size: 1.05rem; }
     .stat.xp { color: var(--gold); }
-    .stat.streak { color: #ff7a45; }
+    .stat.streak { color: #c9d2ec; }
     .stat.talents { color: var(--green); }
     .stat.bibles { color: var(--blue); }
 
     main { max-width: 720px; margin: 0 auto; padding: 18px; }
 
-    /* Cartao de discipulado */
+    /* Cartao do Discipulo + mascote peixe */
     .disciple {
+      display: flex; align-items: center; gap: 16px;
       background: linear-gradient(135deg, #241a4a, #3a1b4a);
       border: 1px solid var(--border); border-radius: 16px;
       padding: 16px 18px; margin-bottom: 18px;
     }
+    .disciple .mascot { width: 68px; height: 68px; flex: 0 0 auto; }
+    .disciple .info { flex: 1; min-width: 0; }
     .disciple .era { font-size: 1.15rem; font-weight: 800; }
     .disciple .sub { color: var(--muted); font-size: .85rem; margin-top: 2px; }
     .bar { height: 12px; background: var(--panel2); border-radius: 8px; overflow: hidden; margin-top: 12px; }
@@ -48,12 +54,19 @@
     .bar-label { display: flex; justify-content: space-between; font-size: .8rem; color: var(--muted); margin-top: 6px; }
 
     .section-title { font-size: 1rem; font-weight: 800; margin: 22px 0 10px; display: flex; align-items: center; gap: 8px; }
+
+    /* Abas de eixo (Biblia / Ingles) */
+    .axis-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+    .axis-tab { flex: 1; text-align: center; padding: 10px; border-radius: 12px; background: var(--panel); border: 1px solid var(--border); font-weight: 700; font-size: .9rem; color: var(--muted); cursor: pointer; }
+    .axis-tab.active { background: var(--purple); color: #fff; border-color: var(--purple); }
+
     .pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: var(--panel); border: 1px solid var(--border); font-size: .82rem; color: var(--muted); cursor: pointer; }
     .pill.active { background: var(--purple); color: #fff; border-color: var(--purple); }
-    .book-picker { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+    .picker { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+    .picker-label { font-size: .78rem; color: var(--muted); margin: 8px 0 4px; }
 
     /* Trilha estilo Duolingo */
-    .path { position: relative; padding: 10px 0 40px; }
+    .path { position: relative; padding: 10px 0 30px; }
     .node-row { display: flex; justify-content: center; margin: 10px 0; }
     .node-row:nth-child(odd) { transform: translateX(-64px); }
     .node-row:nth-child(even) { transform: translateX(64px); }
@@ -61,25 +74,36 @@
       width: 74px; height: 74px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
       font-weight: 800; font-size: 1.05rem; cursor: pointer; position: relative;
-      border: none; color: #17371a;
-      background: var(--green);
+      border: none; color: #17371a; background: var(--green);
       box-shadow: 0 6px 0 var(--green-d); transition: transform .1s, box-shadow .1s;
     }
     .node:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--green-d); }
     .node.done { background: var(--gold); box-shadow: 0 6px 0 #c99a00; color: #3a2c00; }
+    .node.done img { width: 34px; height: 34px; }
     .node.locked { background: var(--locked); box-shadow: 0 6px 0 #23273a; color: #6b7290; cursor: not-allowed; }
     .node .check { position: absolute; top: -6px; right: -6px; background: #fff; color: var(--green-d); border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: .8rem; box-shadow: 0 2px 4px rgba(0,0,0,.3); }
     .node-cap { text-align: center; font-size: .72rem; color: var(--muted); margin-top: 4px; }
+
+    /* Trilhas tematicas */
+    .theme-card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; }
+    .theme-card h4 { font-size: .95rem; margin-bottom: 4px; }
+    .theme-card p { color: var(--muted); font-size: .82rem; margin-bottom: 8px; }
+    .theme-refs { display: flex; gap: 6px; flex-wrap: wrap; }
+    .ref-chip { background: var(--panel2); border: 1px solid var(--border); border-radius: 8px; padding: 5px 9px; font-size: .78rem; cursor: pointer; }
+    .ref-chip:hover { border-color: var(--purple); }
 
     /* Badges */
     .badges { display: flex; gap: 10px; flex-wrap: wrap; }
     .badge { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; font-size: .82rem; display: flex; align-items: center; gap: 8px; }
     .empty { color: var(--muted); font-size: .85rem; }
 
-    /* Modal quiz */
+    /* English placeholder */
+    .english-box { background: var(--panel); border: 1px dashed var(--border); border-radius: 14px; padding: 22px; text-align: center; color: var(--muted); }
+
+    /* Modal licao */
     .overlay { position: fixed; inset: 0; background: rgba(5,7,15,.7); display: none; align-items: center; justify-content: center; padding: 18px; z-index: 50; }
     .overlay.open { display: flex; }
-    .modal { background: var(--panel); border: 1px solid var(--border); border-radius: 18px; padding: 22px; width: 100%; max-width: 440px; }
+    .modal { background: var(--panel); border: 1px solid var(--border); border-radius: 18px; padding: 22px; width: 100%; max-width: 440px; max-height: 90vh; overflow: auto; }
     .modal h3 { font-size: 1.15rem; margin-bottom: 6px; }
     .modal .ref { color: var(--purple2); font-weight: 700; margin-bottom: 14px; }
     .modal p.q { font-size: .95rem; margin-bottom: 12px; }
@@ -98,7 +122,6 @@
     .btn:disabled { background: var(--locked); box-shadow: 0 5px 0 #23273a; color: #6b7290; cursor: not-allowed; }
     .btn.secondary { background: var(--panel2); color: var(--text); box-shadow: 0 5px 0 #12152a; margin-top: 8px; }
 
-    /* Toast */
     .toast { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%) translateY(20px); background: var(--green); color: #123; font-weight: 800; padding: 14px 20px; border-radius: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.4); opacity: 0; transition: all .3s; z-index: 60; text-align: center; }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
     .loading { text-align: center; color: var(--muted); padding: 40px; }
@@ -106,11 +129,11 @@
 </head>
 <body>
   <div class="topbar">
-    <div class="brand">Faith<span>Steps</span></div>
-    <div class="stat streak"><span class="ic">🔥</span><span id="t-streak">0</span></div>
-    <div class="stat xp"><span class="ic">⭐</span><span id="t-xp">0</span> XP</div>
-    <div class="stat talents"><span class="ic">🪙</span><span id="t-talents">0</span></div>
-    <div class="stat bibles"><span class="ic">📖</span><span id="t-bibles">0</span></div>
+    <div class="brand"><img src="/icons/lamp.svg" alt="" />Faith<span>Steps</span></div>
+    <div class="stat streak" title="Ofensiva (constância na Palavra)"><img src="/icons/tablets.svg" alt="ofensiva" /><span id="t-streak">0</span></div>
+    <div class="stat xp" title="Experiência"><img src="/icons/lamp.svg" alt="XP" /><span id="t-xp">0</span></div>
+    <div class="stat talents" title="Talentos">🪙<span id="t-talents">0</span></div>
+    <div class="stat bibles" title="Bíblias doadas">📖<span id="t-bibles">0</span></div>
   </div>
 
   <main>
@@ -131,16 +154,10 @@
 
   <script>
     const API = '';
-    let ctx = { userId: null, challengeId: null, book: 'JHN', dashboard: null, current: null };
-
-    // Livros curtos e populares para a trilha (demo). USFM -> nome.
-    const BOOKS = [
-      { usfm: 'JHN', name: 'João', chapters: 21 },
-      { usfm: 'PHP', name: 'Filipenses', chapters: 4 },
-      { usfm: 'JAS', name: 'Tiago', chapters: 5 },
-      { usfm: 'JON', name: 'Jonas', chapters: 4 },
-      { usfm: 'RUT', name: 'Rute', chapters: 4 },
-    ];
+    let ctx = {
+      userId: null, challengeId: null, dashboard: null, tracks: null,
+      axis: 'bible', section: null, book: null, current: null,
+    };
 
     function toast(msg) {
       const el = document.getElementById('toast');
@@ -155,14 +172,19 @@
       return data;
     }
 
-    // Onboarding: garante usuario + desafio e guarda o userId no localStorage.
+    // Onboarding: garante Discípulo + desafio; guarda o id no localStorage.
     async function bootstrap() {
       let userId = localStorage.getItem('fs_userId');
-      const seed = await api('/api/dev/seed', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      });
+      const [seed, tracks] = await Promise.all([
+        api('/api/dev/seed', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) }),
+        api('/api/tracks').catch(() => null),
+      ]);
       ctx.challengeId = seed.challenge.id;
+      ctx.tracks = tracks;
+      if (tracks && tracks.bible.sections.length) {
+        ctx.section = tracks.bible.sections[0].id;
+        ctx.book = tracks.bible.sections[0].books[0].usfm;
+      }
       if (!userId) { userId = seed.user.id; localStorage.setItem('fs_userId', userId); }
       ctx.userId = userId;
       await refresh();
@@ -187,70 +209,120 @@
       return b ? b.chaptersRead : 0;
     }
 
+    function currentSection() {
+      return ctx.tracks.bible.sections.find(s => s.id === ctx.section) || ctx.tracks.bible.sections[0];
+    }
+    function currentBook() {
+      const sec = currentSection();
+      return sec.books.find(b => b.usfm === ctx.book) || sec.books[0];
+    }
+
     function renderApp(d) {
       const app = document.getElementById('app');
       const pct = d.progress ? d.progress.percentComplete : 0;
       const chaptersRead = d.progress ? d.progress.chaptersRead : 0;
       const total = d.totalBibleChapters;
 
-      const bookButtons = BOOKS.map(b =>
-        '<span class="pill ' + (b.usfm === ctx.book ? 'active' : '') + '" onclick="selectBook(\'' + b.usfm + '\')">' + b.name + '</span>'
-      ).join('');
+      const disciple =
+        '<div class="disciple">' +
+          '<img class="mascot" src="/icons/fish.svg" alt="Mascote peixe" />' +
+          '<div class="info">' +
+            '<div class="era">Discípulo · ' + d.discipleship.name + '</div>' +
+            '<div class="sub">Nível ' + d.discipleship.level + ' · Inglês ' + d.discipleship.englishLevel + ' · Nível XP ' + d.user.level + '</div>' +
+            '<div class="bar"><i style="width:' + pct + '%"></i></div>' +
+            '<div class="bar-label"><span>' + chaptersRead + ' de ' + total + ' capítulos</span><span>' + pct + '% da Palavra</span></div>' +
+          '</div>' +
+        '</div>';
+
+      const axisTabs =
+        '<div class="axis-tabs">' +
+          '<div class="axis-tab ' + (ctx.axis === 'bible' ? 'active' : '') + '" onclick="selectAxis(\'bible\')">📖 Bíblia</div>' +
+          '<div class="axis-tab ' + (ctx.axis === 'english' ? 'active' : '') + '" onclick="selectAxis(\'english\')">🔤 Inglês</div>' +
+        '</div>';
 
       const badges = (d.badges && d.badges.length)
         ? '<div class="badges">' + d.badges.map(b => '<div class="badge">🏅 ' + b.label + '</div>').join('') + '</div>'
         : '<div class="empty">Nenhuma insígnia ainda. Leia um capítulo para começar!</div>';
 
-      app.innerHTML =
-        '<div class="disciple">' +
-          '<div class="era">' + d.discipleship.name + '</div>' +
-          '<div class="sub">Nível ' + d.discipleship.level + ' · Inglês ' + d.discipleship.englishLevel + ' · Nível XP ' + d.user.level + '</div>' +
-          '<div class="bar"><i style="width:' + pct + '%"></i></div>' +
-          '<div class="bar-label"><span>' + chaptersRead + ' de ' + total + ' capítulos</span><span>' + pct + '% da Palavra</span></div>' +
-        '</div>' +
-        '<div class="section-title">📚 Sua trilha</div>' +
-        '<div class="book-picker">' + bookButtons + '</div>' +
-        '<div class="path" id="path"></div>' +
+      let body;
+      if (ctx.axis === 'english') {
+        body = '<div class="english-box">🔤 Eixo de Inglês<br><br>Em breve: lições bilíngues geradas pela IA a partir dos capítulos que você lê. Por enquanto, cada capítulo já traz um resumo em inglês no Tutor de IA.</div>';
+      } else {
+        body =
+          '<div class="section-title">📚 Trilha Principal</div>' +
+          '<div class="picker-label">Seção</div>' +
+          '<div class="picker">' + ctx.tracks.bible.sections.map(s =>
+            '<span class="pill ' + (s.id === ctx.section ? 'active' : '') + '" onclick="selectSection(\'' + s.id + '\')">' + s.name + '</span>'
+          ).join('') + '</div>' +
+          '<div class="picker-label">Livro</div>' +
+          '<div class="picker">' + currentSection().books.map(b =>
+            '<span class="pill ' + (b.usfm === ctx.book ? 'active' : '') + '" onclick="selectBook(\'' + b.usfm + '\')">' + b.name + '</span>'
+          ).join('') + '</div>' +
+          '<div class="path" id="path"></div>' +
+          renderThematic();
+      }
+
+      app.innerHTML = disciple + axisTabs + body +
         '<div class="section-title">🏅 Insígnias</div>' + badges;
 
-      renderPath(d);
+      if (ctx.axis === 'bible') renderPath(d);
+    }
+
+    function renderThematic() {
+      const themes = (ctx.tracks && ctx.tracks.thematic) || [];
+      if (!themes.length) return '';
+      return '<div class="section-title">✨ Trilhas Temáticas</div>' +
+        themes.map(t =>
+          '<div class="theme-card"><h4>' + t.name + '</h4><p>' + t.description + '</p>' +
+          '<div class="theme-refs">' + t.references.map(r =>
+            '<span class="ref-chip" onclick="openRef(\'' + r + '\')">' + r.replace('.', ' ') + '</span>'
+          ).join('') + '</div></div>'
+        ).join('');
     }
 
     function renderPath(d) {
-      const book = BOOKS.find(b => b.usfm === ctx.book);
-      const read = readCountFor(d, ctx.book);
+      const book = currentBook();
+      const read = readCountFor(d, book.usfm);
       let html = '';
       for (let i = 1; i <= book.chapters; i++) {
         const done = i <= read;
-        const locked = i > read + 1; // só o próximo fica disponível
+        const locked = i > read + 1;
         const cls = done ? 'done' : (locked ? 'locked' : '');
         const check = done ? '<span class="check">✓</span>' : '';
         const onclick = locked ? '' : 'onclick="openChapter(\'' + book.usfm + '\',' + i + ')"';
-        html += '<div class="node-row">' +
-          '<div>' +
-            '<button class="node ' + cls + '" ' + onclick + '>' + (done ? '★' : i) + check + '</button>' +
+        const inner = done ? '<img src="/icons/lamp.svg" alt="concluído" />' : i;
+        html += '<div class="node-row"><div>' +
+            '<button class="node ' + cls + '" ' + onclick + '>' + inner + check + '</button>' +
             '<div class="node-cap">Cap. ' + i + '</div>' +
-          '</div>' +
-        '</div>';
+          '</div></div>';
       }
       document.getElementById('path').innerHTML = html;
     }
 
+    function selectAxis(axis) { ctx.axis = axis; renderApp(ctx.dashboard); }
+    function selectSection(id) {
+      ctx.section = id;
+      ctx.book = currentSection().books[0].usfm;
+      renderApp(ctx.dashboard);
+    }
     function selectBook(usfm) { ctx.book = usfm; renderApp(ctx.dashboard); }
 
-    // Abre a lição: texto do capítulo (YouVersion) + tutor de IA (resumo + quiz).
+    // Abre lição por referência USFM completa (ex.: 'PRO.3') vinda das temáticas.
+    function openRef(ref) {
+      const [usfm, ch] = ref.split('.');
+      openChapter(usfm, Number(ch));
+    }
+
     async function openChapter(usfm, chapter) {
-      const book = BOOKS.find(b => b.usfm === usfm);
       const ref = usfm + '.' + chapter;
       ctx.current = { usfm, chapter, ref, selected: null, quiz: null };
 
-      document.getElementById('q-title').textContent = 'Lição: ' + book.name + ' ' + chapter;
+      document.getElementById('q-title').textContent = 'Lição: ' + ref.replace('.', ' ');
       document.getElementById('q-ref').textContent = 'Leitura + Tutor de IA';
       document.getElementById('q-body').innerHTML = '<p class="q">Carregando a Palavra e o Tutor...</p>';
       document.getElementById('q-confirm').disabled = true;
       document.getElementById('overlay').classList.add('open');
 
-      // Busca em paralelo: texto do capítulo, resumo bilíngue e quiz da IA.
       const lang = 'pt';
       const [passage, summary, quiz] = await Promise.all([
         api('/api/bible/passage?ref=' + ref + '&language=' + lang).catch(() => null),
@@ -261,12 +333,11 @@
       ctx.current.quiz = (Array.isArray(quiz) && quiz.length) ? quiz[0] : null;
 
       const textBlock = passage
-        ? '<div class="scripture"><div class="scripture-ref">' + (passage.reference || ref) + '</div>' +
-          '<p>' + escapeHtml(passage.content || '') + '</p></div>'
+        ? '<div class="scripture"><div class="scripture-ref">' + (passage.reference || ref) + '</div><p>' + escapeHtml(passage.content || '') + '</p></div>'
         : '<div class="scripture"><p class="muted">Texto indisponível no momento.</p></div>';
 
       const aiBlock = summary
-        ? '<div class="ai-card"><div class="ai-tag">🤖 Tutor IA</div>' +
+        ? '<div class="ai-card"><div class="ai-tag">🤖 Tutor IA (bilíngue)</div>' +
           '<p><strong>PT:</strong> ' + escapeHtml(summary.summaryPt || '') + '</p>' +
           '<p><strong>EN:</strong> ' + escapeHtml(summary.summaryEn || '') + '</p>' +
           (summary.application ? '<p class="apply">🙏 ' + escapeHtml(summary.application) + '</p>' : '') +
@@ -282,7 +353,6 @@
       }
 
       document.getElementById('q-body').innerHTML = textBlock + aiBlock + quizBlock;
-      // Sem quiz disponível, permite concluir direto.
       document.getElementById('q-confirm').disabled = ctx.current.quiz ? true : false;
     }
 

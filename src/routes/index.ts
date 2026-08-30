@@ -7,6 +7,7 @@ import { Language } from '@/models';
 import { config } from '@/config';
 import { validate } from '@/middleware/validate';
 import { youversion } from '@/integrations/youversion/client';
+import { buildTracks } from '@/modules/tracks';
 import { challengeRoutes } from './challenge.routes';
 import { progressRoutes } from './progress.routes';
 import { userRoutes } from './user.routes';
@@ -20,6 +21,9 @@ const langQuery = z.object({
 export const router = Router();
 
 router.get('/health', (_req, res) => res.json({ status: 'ok' }));
+
+// Estrutura das Trilhas do Conhecimento (eixos, 66 livros por secao, tematicas).
+router.get('/tracks', (_req, res) => res.json(buildTracks()));
 
 router.get('/bible/books', validate(langQuery, 'query'), async (req, res, next) => {
   try {
