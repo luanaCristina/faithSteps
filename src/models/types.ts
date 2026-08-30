@@ -11,8 +11,21 @@ export interface User {
   totalXp: number;
   level: number;
   youversionUserId: string | null;
+  /** Minutos de leitura acumulados (Chronos). */
+  readingMinutes: number;
+  /** Ofensiva atual em dias (Grace Streak). */
+  currentStreak: number;
+  /** Ultimo dia com leitura (para calcular streak). */
+  lastReadDate: Date | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+/** Insignia conquistada pelo usuario. */
+export interface Badge {
+  code: string;
+  label: string;
+  earnedAt: Date;
 }
 
 export interface Challenge {

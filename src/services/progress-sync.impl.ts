@@ -1,19 +1,24 @@
 /**
- * Implementacao concreta do motor de sincronizacao de progresso.
+ * Motor de sincronizacao de progresso (documento V2).
  *
  * Fluxo atomico (uma transacao, com bloqueios FOR UPDATE):
  *  1. valida usuario e desafio;
  *  2. registra o capitulo de forma idempotente (chapter_completions);
- *  3. credita XP conforme idioma e recalcula nivel;
- *  4. incrementa capitulos lidos e atualiza status;
- *  5. acumula Talentos e converte em Biblias doadas quando a meta e atingida.
+ *  3. credita XP (por idioma + bonus de quiz) e recalcula nivel;
+ *  4. incrementa capitulos lidos, atualiza status e ofensiva (streak);
+ *  5. detecta conclusao de livro (bonus +150 XP / +20 Talentos + insignia);
+ *  6. acumula Talentos e converte em Biblias doadas quando a meta e atingida;
+ *  7. concede insignias de marco (Primeiros Passos, Palavra Cumprida).
  */
 import {
   AppError,
   CompleteChapterRequest,
   CompleteChapterResponse,
   ERROR_CODES,
+  QUIZ_TALENTS_BONUS,
+  QUIZ_XP_BONUS,
   TalentTxKind,
+  WHOLE_BIBLE_XP_BONUS,
 } from '@/models';
 import { withTransaction } from '@/config/database';
 import { challengeRepository } from '@/repositories/challenge.repository';
@@ -22,10 +27,14 @@ import { progressRepository } from '@/repositories/progress.repository';
 import { talentsRepository } from '@/repositories/talents.repository';
 import {
   biblesFromTalents,
+  bookCompletionTalents,
+  bookCompletionXp,
+  discipleshipTierForChapters,
   levelForXp,
   talentsForChapter,
   xpForChapter,
 } from '@/modules/gamification';
+import { bookNamePt, chaptersInBook } from '@/modules/bible-books';
 import { deriveStatus, percentComplete } from '@/modules/challenges-engine';
 import { ProgressSyncService } from './progress-sync.service';
 
@@ -42,15 +51,20 @@ export class ProgressSyncServiceImpl implements ProgressSyncService {
     }
 
     return withTransaction(async (db) => {
-      // Bloqueia o usuario para atualizacao consistente de XP.
       const user = await userRepository.findByIdForUpdate(db, input.userId);
       if (!user) {
         throw new AppError(ERROR_CODES.USER_NOT_FOUND, 'Usuario nao encontrado.', 404);
       }
 
-      const xp = xpForChapter(input.language);
+      // XP e Talentos do capitulo (por idioma) + bonus de quiz.
+      let xp = xpForChapter(input.language);
+      let earnedTalents = talentsForChapter(input.language);
+      if (input.quizPassed) {
+        xp += QUIZ_XP_BONUS;
+        earnedTalents += QUIZ_TALENTS_BONUS;
+      }
 
-      // Idempotencia: se ja concluido, nao credita novamente.
+      // Idempotencia do capitulo.
       const isNew = await progressRepository.recordChapterCompletion(db, {
         userId: input.userId,
         challengeId: input.challengeId,
@@ -67,14 +81,53 @@ export class ProgressSyncServiceImpl implements ProgressSyncService {
         );
       }
 
-      // Bloqueia e atualiza o progresso do desafio.
+      const badgesAwarded: string[] = [];
+
+      // Progresso do desafio (bloqueado).
       const progress = await progressRepository.getOrCreateForUpdate(
         db,
         input.userId,
         input.challengeId,
       );
       const newChaptersRead = progress.chaptersRead + 1;
+
+      // --- Deteccao de conclusao de livro (bonus unico) ---
+      let bookCompleted: string | null = null;
+      const bookTotal = chaptersInBook(input.bookUsfm);
+      if (bookTotal > 0) {
+        const readInBook = await progressRepository.countBookChapters(
+          db,
+          input.userId,
+          input.challengeId,
+          input.bookUsfm,
+        );
+        if (readInBook >= bookTotal) {
+          const firstTime = await progressRepository.recordBookCompletion(db, {
+            userId: input.userId,
+            challengeId: input.challengeId,
+            bookUsfm: input.bookUsfm,
+            xpAwarded: bookCompletionXp(),
+            talentsAwarded: bookCompletionTalents(),
+          });
+          if (firstTime) {
+            xp += bookCompletionXp();
+            earnedTalents += bookCompletionTalents();
+            bookCompleted = input.bookUsfm;
+            const label = `Insignia do Livro: ${bookNamePt(input.bookUsfm)}`;
+            await userRepository.awardBadge(db, input.userId, `book_${input.bookUsfm}`, label);
+            badgesAwarded.push(label);
+          }
+        }
+      }
+
+      // Status do desafio (+ bonus de Biblia toda).
       const status = deriveStatus(newChaptersRead, challenge.totalChapters);
+      if (status === 'completed' && progress.status !== 'completed') {
+        xp += WHOLE_BIBLE_XP_BONUS;
+        await userRepository.awardBadge(db, input.userId, 'palavra_cumprida', 'Palavra Cumprida');
+        badgesAwarded.push('Palavra Cumprida');
+      }
+
       const updated = await progressRepository.applyIncrement(db, {
         userId: input.userId,
         challengeId: input.challengeId,
@@ -84,22 +137,28 @@ export class ProgressSyncServiceImpl implements ProgressSyncService {
         completedAt: status === 'completed' ? new Date() : progress.completedAt,
       });
 
-      // Credita XP no usuario e recalcula nivel.
+      // XP do usuario + nivel + ofensiva (streak).
       const newTotalXp = user.totalXp + xp;
       await userRepository.addXpAndLevel(db, input.userId, xp, levelForXp(newTotalXp));
+      const currentStreak = await userRepository.touchStreak(db, input.userId, new Date());
 
-      // Acumula Talentos e converte saldo em Biblias doadas.
+      // Insignia de marco: Primeiros Passos (primeiro capitulo do usuario).
+      if (user.totalXp === 0 && progress.chaptersRead === 0) {
+        await userRepository.awardBadge(db, input.userId, 'primeiros_passos', 'Primeiros Passos');
+        badgesAwarded.push('Primeiros Passos');
+      }
+
+      // Talentos: acumulo + conversao em Biblias.
       const talents = await talentsRepository.getOrCreateForUpdate(db, input.userId);
-      const earned = talentsForChapter();
       await talentsRepository.recordTransaction(db, {
         userId: input.userId,
         kind: TalentTxKind.EARN,
-        amount: earned,
+        amount: earnedTalents,
         sourceChallengeId: input.challengeId,
         note: `${input.bookUsfm}.${input.chapter} (${input.language})`,
       });
 
-      const accumulated = talents.balance + earned;
+      const accumulated = talents.balance + earnedTalents;
       const { bibles, remaining } = biblesFromTalents(accumulated);
       let biblesDonated = talents.biblesDonated;
       if (bibles > 0) {
@@ -119,14 +178,22 @@ export class ProgressSyncServiceImpl implements ProgressSyncService {
         biblesDonated,
       );
 
+      const tier = discipleshipTierForChapters(updated.chaptersRead);
+
       return {
         chaptersRead: updated.chaptersRead,
         totalChapters: challenge.totalChapters,
         percentComplete: percentComplete(updated.chaptersRead, challenge.totalChapters),
         xpAwarded: xp,
         totalXp: newTotalXp,
+        level: levelForXp(newTotalXp),
+        discipleshipLevel: tier.level,
+        discipleshipName: tier.name,
+        currentStreak,
         talentsBalance: savedTalents.balance,
         biblesDonated: savedTalents.biblesDonated,
+        bookCompleted,
+        badgesAwarded,
       };
     });
   }

@@ -5,9 +5,9 @@ import { Router } from 'express';
 import { z } from 'zod';
 import {
   AppError,
-  CHAPTERS_PER_BIBLE_DONATION,
   ERROR_CODES,
   Language,
+  TALENTS_PER_BIBLE_DONATION,
 } from '@/models';
 import { validate } from '@/middleware/validate';
 import { withTransaction } from '@/config/database';
@@ -23,6 +23,8 @@ const completeChapterSchema = z.object({
   bookUsfm: z.string().min(1).max(10),
   chapter: z.number().int().positive(),
   language: z.nativeEnum(Language),
+  quizPassed: z.boolean().optional(),
+  minutes: z.number().int().nonnegative().optional(),
 });
 
 // POST /api/progress/complete-chapter
@@ -48,7 +50,7 @@ const donateSchema = z.object({
 progressRoutes.post('/donate', validate(donateSchema), async (req, res, next) => {
   try {
     const { userId, bibles } = req.body as { userId: string; bibles: number };
-    const cost = bibles * CHAPTERS_PER_BIBLE_DONATION;
+    const cost = bibles * TALENTS_PER_BIBLE_DONATION;
 
     const result = await withTransaction(async (db) => {
       const user = await userRepository.findByIdForUpdate(db, userId);

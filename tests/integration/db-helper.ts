@@ -56,8 +56,8 @@ export async function applyMigrations(pool: Pool): Promise<void> {
 /** Limpa todas as tabelas de dominio (ordem segura por CASCADE). */
 export async function truncateAll(pool: Pool): Promise<void> {
   await pool.query(
-    `TRUNCATE talent_transactions, talents, chapter_completions,
-              user_progress, challenges, users RESTART IDENTITY CASCADE`,
+    `TRUNCATE talent_transactions, talents, chapter_completions, book_completions,
+              badges, user_progress, challenges, users RESTART IDENTITY CASCADE`,
   );
 }
 

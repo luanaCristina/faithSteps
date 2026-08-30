@@ -132,4 +132,59 @@ export const progressRepository = {
     );
     return res.rows[0] ? toEntity(res.rows[0]) : null;
   },
+
+  /** Conta capitulos distintos concluidos de um livro (para detectar livro completo). */
+  async countBookChapters(
+    db: Queryable,
+    userId: string,
+    challengeId: string,
+    bookUsfm: string,
+  ): Promise<number> {
+    const res = await db.query<{ n: string }>(
+      `SELECT COUNT(DISTINCT chapter)::int AS n
+         FROM chapter_completions
+        WHERE user_id = $1 AND challenge_id = $2 AND book_usfm = $3`,
+      [userId, challengeId, bookUsfm],
+    );
+    return Number(res.rows[0]?.n ?? 0);
+  },
+
+  /**
+   * Registra a conclusao de um livro (idempotente). Retorna true se e a
+   * primeira vez (deve creditar o bonus), false se ja registrado.
+   */
+  async recordBookCompletion(
+    db: Queryable,
+    params: {
+      userId: string;
+      challengeId: string;
+      bookUsfm: string;
+      xpAwarded: number;
+      talentsAwarded: number;
+    },
+  ): Promise<boolean> {
+    const res = await db.query(
+      `INSERT INTO book_completions
+         (user_id, challenge_id, book_usfm, xp_awarded, talents_awarded)
+       VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (user_id, challenge_id, book_usfm) DO NOTHING`,
+      [params.userId, params.challengeId, params.bookUsfm, params.xpAwarded, params.talentsAwarded],
+    );
+    return (res.rowCount ?? 0) > 0;
+  },
+
+  /** Progresso por livro do usuario no desafio (para o dashboard). */
+  async bookProgress(
+    userId: string,
+    challengeId: string,
+  ): Promise<{ bookUsfm: string; chaptersRead: number }[]> {
+    const res = await pool.query<{ book_usfm: string; n: string }>(
+      `SELECT book_usfm, COUNT(DISTINCT chapter)::int AS n
+         FROM chapter_completions
+        WHERE user_id = $1 AND challenge_id = $2
+        GROUP BY book_usfm`,
+      [userId, challengeId],
+    );
+    return res.rows.map((r) => ({ bookUsfm: r.book_usfm, chaptersRead: Number(r.n) }));
+  },
 };

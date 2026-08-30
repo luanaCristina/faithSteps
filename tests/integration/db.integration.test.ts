@@ -204,15 +204,13 @@ describe('Integracao Postgres real - ProgressSyncService', () => {
     },
   );
 
-  maybe('doacao: ao fechar a meta, converte Talentos em 1 Biblia', async () => {
+  maybe('doacao: ao atingir 1000 Talentos, converte em 1 Biblia', async () => {
     const userId = await seedUser(pool);
-    // Desafio pequeno para fechar a meta rapidamente NAO aplica (a meta de
-    // doacao e global = 1189). Em vez disso, semeamos saldo perto do limite.
     const challengeId = await seedChallenge(pool, 1189);
 
-    // Semeia saldo de Talentos = 1188 (falta 1 para uma Biblia).
+    // Semeia saldo = 999. Um capitulo PT (+2) => 1001 -> 1 Biblia, resto 1.
     await pool.query(
-      `INSERT INTO talents (user_id, balance, bibles_donated) VALUES ($1, 1188, 0)`,
+      `INSERT INTO talents (user_id, balance, bibles_donated) VALUES ($1, 999, 0)`,
       [userId],
     );
 
@@ -225,12 +223,40 @@ describe('Integracao Postgres real - ProgressSyncService', () => {
     });
 
     expect(res.biblesDonated).toBe(1);
-    expect(res.talentsBalance).toBe(0);
+    expect(res.talentsBalance).toBe(1);
 
     const donate = await pool.query(
       "SELECT count(*)::int AS n FROM talent_transactions WHERE user_id = $1 AND kind = 'DONATE'",
       [userId],
     );
     expect(donate.rows[0].n).toBe(1);
+  });
+
+  maybe('bonus de livro: concluir Jonas (4 cap.) concede +150 XP e insignia', async () => {
+    const userId = await seedUser(pool);
+    const challengeId = await seedChallenge(pool, 1189);
+
+    // Le os 4 capitulos de Jonas (JON) em PT: 4*15 XP + 150 de bonus no ultimo.
+    for (let c = 1; c <= 4; c++) {
+      await progressSyncService.completeChapter({
+        userId, challengeId, bookUsfm: 'JON', chapter: c, language: Language.PT,
+      });
+    }
+
+    // XP = 4*15 (capitulos) + 150 (livro) = 210.
+    const user = await pool.query('SELECT total_xp FROM users WHERE id = $1', [userId]);
+    expect(user.rows[0].total_xp).toBe(210);
+
+    const book = await pool.query(
+      'SELECT count(*)::int AS n FROM book_completions WHERE user_id = $1',
+      [userId],
+    );
+    expect(book.rows[0].n).toBe(1);
+
+    const badge = await pool.query(
+      'SELECT count(*)::int AS n FROM badges WHERE user_id = $1',
+      [userId],
+    );
+    expect(badge.rows[0].n).toBeGreaterThanOrEqual(1);
   });
 });

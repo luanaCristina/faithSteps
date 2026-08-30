@@ -3,155 +3,299 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>YouVersion FaithSteps - Painel de Teste</title>
+  <title>FaithSteps - Discipulado Gamificado</title>
   <style>
-    :root { color-scheme: dark; }
-    * { box-sizing: border-box; }
+    :root {
+      --bg: #0f1220; --panel: #161a2e; --panel2: #1d2238; --border: #2a2f45;
+      --text: #e7e9f0; --muted: #9aa2c0; --purple: #7d5cff; --purple2: #a487ff;
+      --green: #58cc02; --green-d: #46a302; --gold: #ffc800; --blue: #1cb0f6;
+      --locked: #3a3f57;
+      color-scheme: dark;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      background: #0f1220; color: #e7e9f0; line-height: 1.5;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg); color: var(--text); min-height: 100vh;
     }
-    header {
-      padding: 28px 20px; text-align: center;
-      background: linear-gradient(135deg, #1b2a4a, #3a1b4a);
-      border-bottom: 1px solid #2a2f45;
+    /* Header de gamificacao */
+    .topbar {
+      position: sticky; top: 0; z-index: 10;
+      display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
+      padding: 12px 18px; background: rgba(15,18,32,.95);
+      backdrop-filter: blur(8px); border-bottom: 1px solid var(--border);
     }
-    header h1 { margin: 0 0 6px; font-size: 1.5rem; }
-    header p { margin: 0; color: #9aa2c0; font-size: .9rem; }
-    main { max-width: 860px; margin: 0 auto; padding: 20px; }
-    .card {
-      background: #161a2e; border: 1px solid #2a2f45; border-radius: 12px;
-      padding: 18px; margin-bottom: 16px;
+    .brand { font-weight: 800; font-size: 1.05rem; margin-right: auto; letter-spacing: .3px; }
+    .brand span { color: var(--purple2); }
+    .stat { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: .92rem; }
+    .stat .ic { font-size: 1.1rem; }
+    .stat.xp { color: var(--gold); }
+    .stat.streak { color: #ff7a45; }
+    .stat.talents { color: var(--green); }
+    .stat.bibles { color: var(--blue); }
+
+    main { max-width: 720px; margin: 0 auto; padding: 18px; }
+
+    /* Cartao de discipulado */
+    .disciple {
+      background: linear-gradient(135deg, #241a4a, #3a1b4a);
+      border: 1px solid var(--border); border-radius: 16px;
+      padding: 16px 18px; margin-bottom: 18px;
     }
-    .card h2 { margin: 0 0 12px; font-size: 1.05rem; color: #c7b3ff; }
-    .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-    label { font-size: .82rem; color: #9aa2c0; }
-    input, select {
-      background: #0f1220; color: #e7e9f0; border: 1px solid #2a2f45;
-      border-radius: 8px; padding: 8px 10px; font-size: .9rem;
+    .disciple .era { font-size: 1.15rem; font-weight: 800; }
+    .disciple .sub { color: var(--muted); font-size: .85rem; margin-top: 2px; }
+    .bar { height: 12px; background: var(--panel2); border-radius: 8px; overflow: hidden; margin-top: 12px; }
+    .bar > i { display: block; height: 100%; background: linear-gradient(90deg, var(--green), var(--green-d)); border-radius: 8px; transition: width .5s; }
+    .bar-label { display: flex; justify-content: space-between; font-size: .8rem; color: var(--muted); margin-top: 6px; }
+
+    .section-title { font-size: 1rem; font-weight: 800; margin: 22px 0 10px; display: flex; align-items: center; gap: 8px; }
+    .pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; background: var(--panel); border: 1px solid var(--border); font-size: .82rem; color: var(--muted); cursor: pointer; }
+    .pill.active { background: var(--purple); color: #fff; border-color: var(--purple); }
+    .book-picker { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+
+    /* Trilha estilo Duolingo */
+    .path { position: relative; padding: 10px 0 40px; }
+    .node-row { display: flex; justify-content: center; margin: 10px 0; }
+    .node-row:nth-child(odd) { transform: translateX(-64px); }
+    .node-row:nth-child(even) { transform: translateX(64px); }
+    .node {
+      width: 74px; height: 74px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 1.05rem; cursor: pointer; position: relative;
+      border: none; color: #17371a;
+      background: var(--green);
+      box-shadow: 0 6px 0 var(--green-d); transition: transform .1s, box-shadow .1s;
     }
-    button {
-      background: #6d4bff; color: #fff; border: 0; border-radius: 8px;
-      padding: 9px 14px; font-size: .9rem; cursor: pointer; font-weight: 600;
-    }
-    button:hover { background: #825dff; }
-    button.secondary { background: #2a2f45; }
-    pre {
-      background: #0b0e1a; border: 1px solid #2a2f45; border-radius: 8px;
-      padding: 12px; overflow: auto; font-size: .8rem; margin: 12px 0 0;
-      max-height: 320px; white-space: pre-wrap; word-break: break-word;
-    }
-    .hint { font-size: .78rem; color: #7d84a3; margin-top: 6px; }
-    footer { text-align: center; padding: 20px; color: #7d84a3; font-size: .78rem; }
+    .node:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--green-d); }
+    .node.done { background: var(--gold); box-shadow: 0 6px 0 #c99a00; color: #3a2c00; }
+    .node.locked { background: var(--locked); box-shadow: 0 6px 0 #23273a; color: #6b7290; cursor: not-allowed; }
+    .node .check { position: absolute; top: -6px; right: -6px; background: #fff; color: var(--green-d); border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: .8rem; box-shadow: 0 2px 4px rgba(0,0,0,.3); }
+    .node-cap { text-align: center; font-size: .72rem; color: var(--muted); margin-top: 4px; }
+
+    /* Badges */
+    .badges { display: flex; gap: 10px; flex-wrap: wrap; }
+    .badge { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; font-size: .82rem; display: flex; align-items: center; gap: 8px; }
+    .empty { color: var(--muted); font-size: .85rem; }
+
+    /* Modal quiz */
+    .overlay { position: fixed; inset: 0; background: rgba(5,7,15,.7); display: none; align-items: center; justify-content: center; padding: 18px; z-index: 50; }
+    .overlay.open { display: flex; }
+    .modal { background: var(--panel); border: 1px solid var(--border); border-radius: 18px; padding: 22px; width: 100%; max-width: 440px; }
+    .modal h3 { font-size: 1.15rem; margin-bottom: 6px; }
+    .modal .ref { color: var(--purple2); font-weight: 700; margin-bottom: 14px; }
+    .modal p.q { font-size: .95rem; margin-bottom: 12px; }
+    .opt { display: block; width: 100%; text-align: left; background: var(--panel2); border: 2px solid var(--border); color: var(--text); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; cursor: pointer; font-size: .9rem; }
+    .opt:hover { border-color: var(--purple); }
+    .opt.sel { border-color: var(--blue); }
+    .btn { width: 100%; background: var(--green); color: #123; font-weight: 800; border: none; border-radius: 14px; padding: 14px; font-size: 1rem; cursor: pointer; box-shadow: 0 5px 0 var(--green-d); }
+    .btn:disabled { background: var(--locked); box-shadow: 0 5px 0 #23273a; color: #6b7290; cursor: not-allowed; }
+    .btn.secondary { background: var(--panel2); color: var(--text); box-shadow: 0 5px 0 #12152a; margin-top: 8px; }
+
+    /* Toast */
+    .toast { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%) translateY(20px); background: var(--green); color: #123; font-weight: 800; padding: 14px 20px; border-radius: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.4); opacity: 0; transition: all .3s; z-index: 60; text-align: center; }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .loading { text-align: center; color: var(--muted); padding: 40px; }
   </style>
 </head>
 <body>
-  <header>
-    <h1>YouVersion FaithSteps</h1>
-    <p>Painel de teste dos recursos da API</p>
-  </header>
+  <div class="topbar">
+    <div class="brand">Faith<span>Steps</span></div>
+    <div class="stat streak"><span class="ic">🔥</span><span id="t-streak">0</span></div>
+    <div class="stat xp"><span class="ic">⭐</span><span id="t-xp">0</span> XP</div>
+    <div class="stat talents"><span class="ic">🪙</span><span id="t-talents">0</span></div>
+    <div class="stat bibles"><span class="ic">📖</span><span id="t-bibles">0</span></div>
+  </div>
 
   <main>
-    <div class="card">
-      <h2>Saude da API</h2>
-      <div class="row">
-        <button onclick="call('/api/health', 'health')">GET /api/health</button>
-      </div>
-      <pre id="health">—</pre>
-    </div>
-
-    <div class="card">
-      <h2>Biblia (YouVersion)</h2>
-      <div class="row">
-        <label>Idioma</label>
-        <select id="lang">
-          <option value="pt">Português (pt)</option>
-          <option value="en">English (en)</option>
-        </select>
-        <button onclick="callBible('books')">Listar livros</button>
-        <button onclick="callBible('verse-of-the-day')">Versículo do dia</button>
-      </div>
-      <pre id="bible">—</pre>
-    </div>
-
-    <div class="card">
-      <h2>Desafios</h2>
-      <div class="row">
-        <button onclick="call('/api/challenges', 'challenges')">Listar desafios</button>
-      </div>
-      <pre id="challenges">—</pre>
-    </div>
-
-    <div class="card">
-      <h2>Sincronizar leitura de capítulo</h2>
-      <div class="row">
-        <label>User ID</label>
-        <input id="cc_user" placeholder="uuid do usuário" size="30" />
-      </div>
-      <div class="row" style="margin-top:8px">
-        <label>Challenge ID</label>
-        <input id="cc_challenge" placeholder="uuid do desafio" size="30" />
-      </div>
-      <div class="row" style="margin-top:8px">
-        <label>Livro</label>
-        <input id="cc_book" placeholder="JHN" size="6" />
-        <label>Capítulo</label>
-        <input id="cc_chapter" type="number" value="3" size="4" />
-        <label>Idioma</label>
-        <select id="cc_lang"><option value="pt">pt</option><option value="en">en</option></select>
-        <button onclick="completeChapter()">Marcar como lido</button>
-      </div>
-      <p class="hint">Requer um usuário e um desafio existentes no banco.</p>
-      <pre id="complete">—</pre>
-    </div>
+    <div id="app"><div class="loading">Preparando sua jornada...</div></div>
   </main>
 
-  <footer>
-    FaithSteps API · <span id="origin"></span>
-  </footer>
+  <div class="overlay" id="overlay">
+    <div class="modal">
+      <h3 id="q-title">Capítulo</h3>
+      <div class="ref" id="q-ref"></div>
+      <div id="q-body"></div>
+      <button class="btn" id="q-confirm" disabled>Concluir capítulo</button>
+      <button class="btn secondary" id="q-skip">Ler sem quiz</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
 
   <script>
-    document.getElementById('origin').textContent = location.origin;
+    const API = '';
+    let ctx = { userId: null, challengeId: null, book: 'JHN', dashboard: null, current: null };
 
-    async function call(path, target) {
-      const el = document.getElementById(target);
-      el.textContent = 'Carregando...';
-      try {
-        const res = await fetch(path);
-        const data = await res.json();
-        el.textContent = 'HTTP ' + res.status + '\n' + JSON.stringify(data, null, 2);
-      } catch (e) {
-        el.textContent = 'Erro: ' + e.message;
+    // Livros curtos e populares para a trilha (demo). USFM -> nome.
+    const BOOKS = [
+      { usfm: 'JHN', name: 'João', chapters: 21 },
+      { usfm: 'PHP', name: 'Filipenses', chapters: 4 },
+      { usfm: 'JAS', name: 'Tiago', chapters: 5 },
+      { usfm: 'JON', name: 'Jonas', chapters: 4 },
+      { usfm: 'RUT', name: 'Rute', chapters: 4 },
+    ];
+
+    // Banco simples de quizzes por livro (1 pergunta genérica por capítulo).
+    const QUIZ = {
+      JHN: { q: 'Qual é o tema central do Evangelho de João?', opts: ['O amor de Deus e a vida em Cristo', 'A genealogia dos reis', 'As leis cerimoniais'], answer: 0 },
+      default: { q: 'Qual atitude a leitura da Palavra cultiva?', opts: ['Ansiedade por desempenho', 'Constância amorosa e fé', 'Competição com o próximo'], answer: 1 },
+    };
+
+    function toast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg; el.classList.add('show');
+      setTimeout(() => el.classList.remove('show'), 2600);
+    }
+
+    async function api(path, opts) {
+      const res = await fetch(API + path, opts);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Object({ status: res.status, data });
+      return data;
+    }
+
+    // Onboarding: garante usuario + desafio e guarda o userId no localStorage.
+    async function bootstrap() {
+      let userId = localStorage.getItem('fs_userId');
+      const seed = await api('/api/dev/seed', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      ctx.challengeId = seed.challenge.id;
+      if (!userId) { userId = seed.user.id; localStorage.setItem('fs_userId', userId); }
+      ctx.userId = userId;
+      await refresh();
+    }
+
+    async function refresh() {
+      const d = await api('/api/users/' + ctx.userId + '/dashboard');
+      ctx.dashboard = d;
+      renderTop(d);
+      renderApp(d);
+    }
+
+    function renderTop(d) {
+      document.getElementById('t-streak').textContent = d.user.currentStreak;
+      document.getElementById('t-xp').textContent = d.user.totalXp;
+      document.getElementById('t-talents').textContent = d.talents.balance;
+      document.getElementById('t-bibles').textContent = d.talents.biblesDonated;
+    }
+
+    function readCountFor(d, usfm) {
+      const b = (d.progress && d.progress.books || []).find(x => x.usfm === usfm);
+      return b ? b.chaptersRead : 0;
+    }
+
+    function renderApp(d) {
+      const app = document.getElementById('app');
+      const pct = d.progress ? d.progress.percentComplete : 0;
+      const chaptersRead = d.progress ? d.progress.chaptersRead : 0;
+      const total = d.totalBibleChapters;
+
+      const bookButtons = BOOKS.map(b =>
+        '<span class="pill ' + (b.usfm === ctx.book ? 'active' : '') + '" onclick="selectBook(\'' + b.usfm + '\')">' + b.name + '</span>'
+      ).join('');
+
+      const badges = (d.badges && d.badges.length)
+        ? '<div class="badges">' + d.badges.map(b => '<div class="badge">🏅 ' + b.label + '</div>').join('') + '</div>'
+        : '<div class="empty">Nenhuma insígnia ainda. Leia um capítulo para começar!</div>';
+
+      app.innerHTML =
+        '<div class="disciple">' +
+          '<div class="era">' + d.discipleship.name + '</div>' +
+          '<div class="sub">Nível ' + d.discipleship.level + ' · Inglês ' + d.discipleship.englishLevel + ' · Nível XP ' + d.user.level + '</div>' +
+          '<div class="bar"><i style="width:' + pct + '%"></i></div>' +
+          '<div class="bar-label"><span>' + chaptersRead + ' de ' + total + ' capítulos</span><span>' + pct + '% da Palavra</span></div>' +
+        '</div>' +
+        '<div class="section-title">📚 Sua trilha</div>' +
+        '<div class="book-picker">' + bookButtons + '</div>' +
+        '<div class="path" id="path"></div>' +
+        '<div class="section-title">🏅 Insígnias</div>' + badges;
+
+      renderPath(d);
+    }
+
+    function renderPath(d) {
+      const book = BOOKS.find(b => b.usfm === ctx.book);
+      const read = readCountFor(d, ctx.book);
+      let html = '';
+      for (let i = 1; i <= book.chapters; i++) {
+        const done = i <= read;
+        const locked = i > read + 1; // só o próximo fica disponível
+        const cls = done ? 'done' : (locked ? 'locked' : '');
+        const check = done ? '<span class="check">✓</span>' : '';
+        const onclick = locked ? '' : 'onclick="openChapter(\'' + book.usfm + '\',' + i + ')"';
+        html += '<div class="node-row">' +
+          '<div>' +
+            '<button class="node ' + cls + '" ' + onclick + '>' + (done ? '★' : i) + check + '</button>' +
+            '<div class="node-cap">Cap. ' + i + '</div>' +
+          '</div>' +
+        '</div>';
       }
+      document.getElementById('path').innerHTML = html;
     }
 
-    function callBible(kind) {
-      const lang = document.getElementById('lang').value;
-      call('/api/bible/' + kind + '?language=' + lang, 'bible');
+    function selectBook(usfm) { ctx.book = usfm; renderApp(ctx.dashboard); }
+
+    // Abre o "quiz" do capítulo antes de concluir.
+    function openChapter(usfm, chapter) {
+      ctx.current = { usfm, chapter, selected: null };
+      const book = BOOKS.find(b => b.usfm === usfm);
+      const quiz = QUIZ[usfm] || QUIZ.default;
+      document.getElementById('q-title').textContent = 'Lição: ' + book.name + ' ' + chapter;
+      document.getElementById('q-ref').textContent = 'Leia ' + book.name + ' capítulo ' + chapter + ' e responda:';
+      document.getElementById('q-body').innerHTML =
+        '<p class="q">' + quiz.q + '</p>' +
+        quiz.opts.map((o, idx) => '<button class="opt" data-idx="' + idx + '" onclick="selectOpt(' + idx + ')">' + o + '</button>').join('');
+      const confirm = document.getElementById('q-confirm');
+      confirm.disabled = true;
+      confirm.textContent = 'Concluir capítulo';
+      document.getElementById('overlay').classList.add('open');
     }
 
-    async function completeChapter() {
-      const el = document.getElementById('complete');
-      el.textContent = 'Enviando...';
-      const body = {
-        userId: document.getElementById('cc_user').value.trim(),
-        challengeId: document.getElementById('cc_challenge').value.trim(),
-        bookUsfm: document.getElementById('cc_book').value.trim(),
-        chapter: Number(document.getElementById('cc_chapter').value),
-        language: document.getElementById('cc_lang').value,
-      };
+    function selectOpt(idx) {
+      ctx.current.selected = idx;
+      document.querySelectorAll('.opt').forEach(el => el.classList.toggle('sel', Number(el.dataset.idx) === idx));
+      document.getElementById('q-confirm').disabled = false;
+    }
+
+    function closeModal() { document.getElementById('overlay').classList.remove('open'); }
+
+    async function completeChapter(withQuiz) {
+      const { usfm, chapter, selected } = ctx.current;
+      const quiz = QUIZ[usfm] || QUIZ.default;
+      const quizPassed = withQuiz && selected === quiz.answer;
       try {
-        const res = await fetch('/api/progress/complete-chapter', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
+        const r = await api('/api/progress/complete-chapter', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: ctx.userId, challengeId: ctx.challengeId,
+            bookUsfm: usfm, chapter, language: 'pt', quizPassed,
+          }),
         });
-        const data = await res.json();
-        el.textContent = 'HTTP ' + res.status + '\n' + JSON.stringify(data, null, 2);
+        closeModal();
+        let msg = '+' + r.xpAwarded + ' XP';
+        if (r.bookCompleted) msg += ' · Livro concluído! 📗';
+        if (r.badgesAwarded && r.badgesAwarded.length) msg += ' · ' + r.badgesAwarded.join(', ');
+        toast(msg);
+        await refresh();
       } catch (e) {
-        el.textContent = 'Erro: ' + e.message;
+        if (e.data && e.data.error && e.data.error.code === 'CHAPTER_ALREADY_COMPLETED') {
+          closeModal(); toast('Capítulo já concluído 🙏'); await refresh();
+        } else {
+          toast('Erro ao concluir. Tente de novo.');
+        }
       }
     }
+
+    document.getElementById('q-confirm').onclick = () => completeChapter(true);
+    document.getElementById('q-skip').onclick = () => completeChapter(false);
+    document.getElementById('overlay').onclick = (e) => { if (e.target.id === 'overlay') closeModal(); };
+
+    bootstrap().catch(err => {
+      document.getElementById('app').innerHTML =
+        '<div class="loading">Não foi possível iniciar. Verifique se o banco está configurado.<br><small>' +
+        (err && err.data && err.data.error ? err.data.error.message : 'Erro desconhecido') + '</small></div>';
+    });
   </script>
 </body>
 </html>

@@ -13,6 +13,8 @@ import {
 } from '@/integrations/youversion';
 import { challengeRoutes } from './challenge.routes';
 import { progressRoutes } from './progress.routes';
+import { userRoutes } from './user.routes';
+import { devRoutes } from './dev.routes';
 
 // Seleciona a implementacao (mock em staging) a partir da config.
 const youversion: YouVersionService = config.youversion.useMock
@@ -51,3 +53,5 @@ router.get('/bible/verse-of-the-day', validate(langQuery, 'query'), async (req, 
 
 router.use('/challenges', challengeRoutes);
 router.use('/progress', progressRoutes);
+router.use('/users', userRoutes);
+router.use('/dev', devRoutes);

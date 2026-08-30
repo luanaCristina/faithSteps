@@ -1,7 +1,8 @@
 import fc from 'fast-check';
-import { CHAPTERS_PER_BIBLE_DONATION, Language } from '@/models';
+import { Language, TALENTS_PER_BIBLE_DONATION } from '@/models';
 import {
   biblesFromTalents,
+  discipleshipTierForChapters,
   levelForXp,
   talentsForChapter,
   xpForChapter,
@@ -15,8 +16,21 @@ describe('gamification (property-based)', () => {
     expect(xpForChapter(Language.EN)).toBeGreaterThan(xpForChapter(Language.PT));
   });
 
-  it('talentsForChapter: sempre 1 (1 capitulo = 1 talento)', () => {
-    expect(talentsForChapter()).toBe(1);
+  it('talentsForChapter: PT = 2, EN = 4 (documento V2)', () => {
+    expect(talentsForChapter(Language.PT)).toBe(2);
+    expect(talentsForChapter(Language.EN)).toBe(4);
+    expect(talentsForChapter(Language.EN)).toBeGreaterThan(talentsForChapter(Language.PT));
+  });
+
+  it('discipleshipTierForChapters: nivel cresce (nao decresce) com mais capitulos', () => {
+    fc.assert(
+      fc.property(fc.integer({ min: 0, max: 1300 }), (n) => {
+        const level = discipleshipTierForChapters(n).level;
+        expect(level).toBeGreaterThanOrEqual(1);
+        expect(level).toBeLessThanOrEqual(5);
+        expect(discipleshipTierForChapters(n + 1).level).toBeGreaterThanOrEqual(level);
+      }),
+    );
   });
 
   it('levelForXp: nunca abaixo de 1 e monotonicamente nao-decrescente', () => {
@@ -44,8 +58,8 @@ describe('gamification (property-based)', () => {
         const { bibles, remaining } = biblesFromTalents(balance);
         expect(bibles).toBeGreaterThanOrEqual(0);
         expect(remaining).toBeGreaterThanOrEqual(0);
-        expect(remaining).toBeLessThan(CHAPTERS_PER_BIBLE_DONATION);
-        expect(bibles * CHAPTERS_PER_BIBLE_DONATION + remaining).toBe(balance);
+        expect(remaining).toBeLessThan(TALENTS_PER_BIBLE_DONATION);
+        expect(bibles * TALENTS_PER_BIBLE_DONATION + remaining).toBe(balance);
       }),
     );
   });
