@@ -142,6 +142,31 @@
     .badges { display: flex; gap: 10px; flex-wrap: wrap; }
     .badge { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; font-size: .82rem; display: flex; align-items: center; gap: 8px; }
     .empty { color: var(--muted); font-size: .85rem; }
+    .audio-button { display: inline-flex; align-items: center; gap: 5px; border: 1px solid rgba(113,190,255,.35); border-radius: 8px; padding: 5px 8px; background: rgba(28,176,246,.12); color: #dce9ff; font-size: .74rem; font-weight: 800; cursor: pointer; }
+    .audio-button:hover { border-color: var(--blue); background: rgba(28,176,246,.2); }
+    .audio-button.speaking { border-color: var(--gold); color: var(--gold); }
+    .verse-audio { display: flex; justify-content: flex-end; margin-top: 9px; }
+    .achievement-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin-bottom: 14px; }
+    .achievement-card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 10px 11px; display: flex; align-items: center; gap: 8px; }
+    .achievement-card strong { display: block; font-size: .78rem; }
+    .achievement-card small { display: block; color: var(--muted); font-size: .69rem; margin-top: 2px; }
+    .achievement-icon { font-size: 1.2rem; }
+    .achievement-card.locked { opacity: .5; }
+    .ranking-shell { background: linear-gradient(135deg, rgba(125,92,255,.14), rgba(28,176,246,.08)); border: 1px solid rgba(125,92,255,.28); border-radius: 15px; padding: 15px; margin: 18px 0; }
+    .ranking-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 9px; }
+    .ranking-head h3 { font-size: 1rem; }
+    .ranking-head span { color: var(--muted); font-size: .72rem; }
+    .ranking-row { display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 8px; background: rgba(7,10,20,.28); border-radius: 9px; padding: 8px 9px; margin-top: 5px; font-size: .78rem; }
+    .ranking-row.me { border: 1px solid rgba(67,217,154,.45); background: rgba(67,217,154,.08); }
+    .ranking-position { color: var(--gold); font-weight: 900; text-align: center; }
+    .ranking-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ranking-name small { display: block; color: var(--muted); font-size: .68rem; margin-top: 2px; }
+    .ranking-score { color: #fff; font-weight: 850; text-align: right; }
+    .ranking-current { border-top: 1px solid var(--border); margin-top: 10px; padding-top: 9px; color: var(--muted); font-size: .76rem; }
+    .ranking-current strong { color: var(--green); }
+    @media (max-width: 520px) {
+      .achievement-grid { grid-template-columns: 1fr; }
+    }
 
     /* Jornada de Inglês com a Bíblia */
     .english-box { background: var(--panel); border: 1px dashed var(--border); border-radius: 14px; padding: 22px; text-align: center; color: var(--muted); }
@@ -177,6 +202,8 @@
     .lesson-focus strong { color: var(--gold); }
     .vocabulary { display: flex; flex-wrap: wrap; gap: 6px; margin: 7px 0 14px; }
     .vocabulary span { border: 1px solid var(--border); border-radius: 8px; padding: 5px 8px; color: #dce9ff; font-size: .76rem; }
+    .vocabulary-word { display: inline-flex; align-items: center; gap: 5px; }
+    .vocabulary-word .audio-button { border: 0; background: transparent; padding: 1px 2px; font-size: .7rem; }
     .lesson-practice { border-left: 3px solid var(--purple); padding: 3px 0 3px 11px; color: var(--muted); font-size: .84rem; line-height: 1.45; }
     @media (max-width: 520px) {
       .english-module-head { flex-direction: column; gap: 4px; }
@@ -265,7 +292,7 @@
       userId: null, challengeId: null, dashboard: null, tracks: null,
       axis: 'bible', section: null, book: null, current: null,
       placementLevels: {}, placement: null, view: 'auth', authMode: 'login', authUser: null,
-      englishCompleted: {}, englishLesson: null,
+      englishCompleted: {}, englishLesson: null, ranking: null,
     };
 
     const PLACEMENT_QUESTIONS = {
@@ -387,8 +414,12 @@
     }
 
     async function refresh() {
-      const d = await api('/api/users/' + ctx.userId + '/dashboard');
+      const [d, ranking] = await Promise.all([
+        api('/api/users/' + ctx.userId + '/dashboard'),
+        api('/api/leaderboard').catch(() => null),
+      ]);
       ctx.dashboard = d;
+      ctx.ranking = ranking;
       ctx.englishCompleted = {};
       (d.englishProgress && d.englishProgress.completedLessonIds || []).forEach(id => { ctx.englishCompleted[id] = true; });
       restoreLastPosition(d);
@@ -553,6 +584,7 @@
       ctx.placementLevels = {};
       ctx.englishCompleted = {};
       ctx.englishLesson = null;
+      ctx.ranking = null;
       ctx.view = 'auth';
       renderTop(null);
       showAuth('login');
@@ -587,15 +619,35 @@
       document.getElementById('q-body').innerHTML =
         '<div class="english-lesson-modal">' +
           '<p class="q">' + escapeHtml(lesson.description) + '</p>' +
-          '<div class="modal-verse">“' + escapeHtml(lesson.verse) + '<small>📖 ' + escapeHtml(lesson.reference.replace('.', ' ')) + '</small></div>' +
+          '<div class="modal-verse">“' + escapeHtml(lesson.verse) + '<small>📖 ' + escapeHtml(lesson.reference.replace('.', ' ')) + '</small><div class="verse-audio"><button class="audio-button" type="button" data-speak="' + escapeHtml(lesson.verse) + '">🔊 Ouvir versículo</button></div></div>' +
           '<div class="lesson-focus"><strong>Foco da aula:</strong> ' + escapeHtml(lesson.focus) + '</div>' +
-          '<div class="muted">Vocabulário-chave</div>' +
-          '<div class="vocabulary">' + lesson.vocabulary.map(word => '<span>' + escapeHtml(word) + '</span>').join('') + '</div>' +
+          '<div class="muted">Vocabulário-chave · toque em uma palavra para ouvir</div>' +
+          '<div class="vocabulary">' + lesson.vocabulary.map(word => '<span class="vocabulary-word">' + escapeHtml(word) + '<button class="audio-button" type="button" data-speak="' + escapeHtml(word) + '" aria-label="Ouvir ' + escapeHtml(word) + '">🔊</button></span>').join('') + '</div>' +
           '<div class="lesson-practice"><strong>Prática:</strong> ' + escapeHtml(lesson.practice) + '</div>' +
         '</div>';
       document.getElementById('q-confirm').textContent = completed ? 'Lição concluída' : 'Concluir lição';
       document.getElementById('q-confirm').disabled = completed;
       document.getElementById('q-skip').textContent = 'Fechar';
+      document.querySelectorAll('[data-speak]').forEach(button => {
+        button.addEventListener('click', () => speakEnglishText(button.dataset.speak, button));
+      });
+    }
+
+    function speakEnglishText(text, button) {
+      if (!('speechSynthesis' in window) || !('SpeechSynthesisUtterance' in window)) {
+        toast('Seu navegador não oferece áudio de pronúncia.');
+        return;
+      }
+      window.speechSynthesis.cancel();
+      document.querySelectorAll('.audio-button.speaking').forEach(el => el.classList.remove('speaking'));
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'en-US';
+      utterance.rate = 0.84;
+      utterance.pitch = 1;
+      if (button) button.classList.add('speaking');
+      utterance.onend = () => { if (button) button.classList.remove('speaking'); };
+      utterance.onerror = () => { if (button) button.classList.remove('speaking'); };
+      window.speechSynthesis.speak(utterance);
     }
 
     async function completeEnglishLesson() {
@@ -611,7 +663,9 @@
         const response = await api('/api/english/lessons/' + lesson.id + '/complete', { method: 'POST' });
         ctx.englishCompleted[lesson.id] = true;
         closeModal();
-        toast(response.newlyCompleted ? 'Lição concluída. Continue caminhando!' : 'Lição revisada.');
+        let message = response.newlyCompleted ? 'Lição concluída. Continue caminhando!' : 'Lição revisada.';
+        if (response.awards && response.awards.length) message += ' · ' + response.awards.join(', ');
+        toast(message);
         await refresh();
       } catch (_) {
         confirm.disabled = false;
@@ -659,6 +713,38 @@
 
       const nextButton = nextLesson ? `<button class="btn" type="button" onclick="openEnglishLesson('${nextLesson.id}')">Continuar: ${escapeHtml(nextLesson.title)}</button>` : '<div class="resume-note">✓ Jornada concluída. Continue revisando as lições e praticando.</div>';
       return '<div class="english-journey-summary"><h3>Jornada de Inglês com a Bíblia</h3><p>Leia passagens conhecidas, aprenda vocabulário e pratique estruturas da língua em uma sequência que vai do essencial à leitura avançada.</p><div class="english-summary-row"><span><strong>' + completedCount + ' de ' + totalLessons + '</strong> lições concluídas</span><span>Seu ponto de partida: <strong>' + escapeHtml(level.level) + '</strong></span></div><div class="english-progress-track"><i style="width:' + percent + '%"></i></div><div class="about-cta">' + nextButton + '</div></div>' + moduleHtml;
+    }
+
+    function renderAchievements(d) {
+      const earned = new Set((d.badges || []).map(badge => badge.code));
+      const achievements = [
+        { code: 'english_first_lesson', icon: '🔤', title: 'Primeira aula', detail: 'Conclua sua primeira lição de Inglês.' },
+        { code: 'english_five_lessons', icon: '📚', title: 'Ritmo de aprendiz', detail: 'Conclua 5 lições de Inglês.' },
+        { code: 'english_halfway', icon: '🌿', title: 'Meio da jornada', detail: 'Complete metade da jornada de Inglês.' },
+        { code: 'english_journey_complete', icon: '🏆', title: 'Inglês concluído', detail: 'Complete as 20 lições de Inglês.' },
+        { code: 'discipleship_level_2', icon: '🚶', title: 'Discípulo Caminhante', detail: 'Leia 100 capítulos no eixo Bíblia.' },
+        { code: 'discipleship_level_3', icon: '🛡️', title: 'Guardião da Palavra', detail: 'Leia 400 capítulos no eixo Bíblia.' },
+        { code: 'discipleship_level_4', icon: '🌟', title: 'Mestre & Discipulador', detail: 'Leia 750 capítulos no eixo Bíblia.' },
+        { code: 'discipleship_level_5', icon: '🎓', title: 'Expert & Exegeta', detail: 'Conclua os 1.189 capítulos.' },
+      ];
+      return '<div class="achievement-grid">' + achievements.map(item => {
+        const isEarned = earned.has(item.code);
+        return '<div class="achievement-card ' + (isEarned ? '' : 'locked') + '"><span class="achievement-icon">' + (isEarned ? item.icon : '🔒') + '</span><div><strong>' + escapeHtml(item.title) + '</strong><small>' + escapeHtml(isEarned ? 'Conquista desbloqueada' : item.detail) + '</small></div></div>';
+      }).join('') + '</div>';
+    }
+
+    function renderRanking() {
+      if (!ctx.ranking) return '';
+      const entries = ctx.ranking.entries || [];
+      const currentUser = ctx.ranking.currentUser;
+      const medal = rank => rank === 1 ? '🥇' : (rank === 2 ? '🥈' : (rank === 3 ? '🥉' : rank));
+      const rows = entries.length ? entries.map(entry =>
+        '<div class="ranking-row ' + (entry.userId === ctx.userId ? 'me' : '') + '"><span class="ranking-position">' + medal(entry.rank) + '</span><span class="ranking-name">' + escapeHtml(entry.displayName) + '<small>' + entry.bibleChapters + ' capítulos · ' + entry.englishLessons + ' lições de Inglês · ofensiva ' + entry.currentStreak + '</small></span><span class="ranking-score">' + entry.score + ' pts</span></div>'
+      ).join('') : '<div class="empty">Complete uma lição ou capítulo para entrar no ranking.</div>';
+      const current = currentUser
+        ? '<div class="ranking-current">Sua posição: <strong>#' + currentUser.rank + '</strong> · ' + currentUser.score + ' pontos</div>'
+        : '<div class="ranking-current">Você ainda não aparece no ranking. Comece uma lição ou capítulo.</div>';
+      return '<section class="ranking-shell"><div class="ranking-head"><h3>🏅 Ranking da comunidade</h3><span>XP + prática de Inglês</span></div>' + rows + current + '</section>';
     }
 
     function renderApp(d) {
@@ -727,7 +813,9 @@
       }
 
       app.innerHTML = disciple + axisTabs + body +
-        '<div class="section-title">🏅 Insígnias</div>' + badges;
+        '<div class="section-title">🏆 Conquistas</div>' + renderAchievements(d) +
+        '<div class="section-title">🏅 Insígnias e marcos</div>' + badges +
+        renderRanking();
 
       if (ctx.axis === 'bible') renderPath(d);
     }

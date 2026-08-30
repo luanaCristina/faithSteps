@@ -127,13 +127,14 @@ export const userRepository = {
     userId: string,
     code: string,
     label: string,
-  ): Promise<void> {
-    await db.query(
+  ): Promise<boolean> {
+    const res = await db.query(
       `INSERT INTO badges (user_id, code, label)
        VALUES ($1, $2, $3)
        ON CONFLICT (user_id, code) DO NOTHING`,
       [userId, code, label],
     );
+    return (res.rowCount ?? 0) > 0;
   },
 
   async listBadges(userId: string): Promise<{ code: string; label: string; earnedAt: Date }[]> {

@@ -19,11 +19,12 @@ jest.mock('@/repositories/challenge.repository', () => ({
   challengeRepository: { listActive: jest.fn(), findById: jest.fn() },
 }));
 jest.mock('@/repositories/user.repository', () => ({
-  userRepository: {
+    userRepository: {
     findById: jest.fn(),
     findByEmailForAuth: jest.fn(),
     createAccount: jest.fn(),
     findByIdForUpdate: jest.fn(),
+    awardBadge: jest.fn(),
   },
 }));
 jest.mock('@/config/database', () => ({
@@ -48,6 +49,9 @@ describe('API da jornada de Inglês', () => {
     jest.clearAllMocks();
     (authSessionRepository.findUserIdByTokenHash as jest.Mock).mockResolvedValue(USER);
     (progressRepository.completeEnglishLesson as jest.Mock).mockResolvedValue(true);
+    (progressRepository.englishLessonProgress as jest.Mock).mockResolvedValue([{ lessonId: 'eng-01', completedAt: new Date() }]);
+    const { userRepository } = require('@/repositories/user.repository');
+    (userRepository.awardBadge as jest.Mock).mockResolvedValue(true);
   });
 
   it('exige uma sessão para concluir a lição', async () => {
@@ -67,7 +71,12 @@ describe('API da jornada de Inglês', () => {
       .send();
 
     expect(res.status).toBe(201);
-    expect(res.body).toEqual({ lessonId: 'eng-01', completed: true, newlyCompleted: true });
+    expect(res.body).toEqual({
+      lessonId: 'eng-01',
+      completed: true,
+      newlyCompleted: true,
+      awards: ['Inglês: Primeira lição'],
+    });
     expect(progressRepository.completeEnglishLesson).toHaveBeenCalledWith(USER, 'eng-01');
   });
 

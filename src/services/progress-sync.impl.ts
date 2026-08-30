@@ -14,6 +14,7 @@ import {
   AppError,
   CompleteChapterRequest,
   CompleteChapterResponse,
+  DISCIPLESHIP_TIERS,
   ERROR_CODES,
   QUIZ_TALENTS_BONUS,
   QUIZ_XP_BONUS,
@@ -179,6 +180,20 @@ export class ProgressSyncServiceImpl implements ProgressSyncService {
       );
 
       const tier = discipleshipTierForChapters(updated.chaptersRead);
+
+      // Conquistas de marco do eixo Bíblia: cada nível é creditado uma única vez.
+      for (const milestone of DISCIPLESHIP_TIERS.slice(1)) {
+        if (progress.chaptersRead < milestone.chaptersRequired && updated.chaptersRead >= milestone.chaptersRequired) {
+          const label = `Eixo Bíblia: ${milestone.name}`;
+          const awarded = await userRepository.awardBadge(
+            db,
+            input.userId,
+            `discipleship_level_${milestone.level}`,
+            label,
+          );
+          if (awarded) badgesAwarded.push(label);
+        }
+      }
 
       return {
         chaptersRead: updated.chaptersRead,
